@@ -5,6 +5,7 @@ import {
   Home,
   Building,
   Search,
+  Sparkles,
   BarChart2,
   Settings,
   X,
@@ -26,7 +27,7 @@ export function AppSidebar({
   const navigation = [
     { name: "Homepage", href: "/app", icon: Home },
     { name: "Properties", href: "/app/properties", icon: Building },
-    { name: "AI Search", href: "/app/ai-search", icon: Search },
+    { name: "AI Search", href: "/app/ai-search", icon: Sparkles },
     { name: "Analytics", href: "/app/analytics", icon: BarChart2 },
     { name: "Settings", href: "/app/settings", icon: Settings },
     { name: "Components", href: "/app/z-components", icon: Component },

@@ -277,10 +277,11 @@ export default function PropertyDetailsPage() {
             {/* Left side - Property details */}
             <div className="flex-1">
               <h1 className="text-3xl font-bold">{property?.title}</h1>
-              <p className="text-lg text-gray-600 flex items-center mt-1">
-                <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+              <p className="text-lg text-gray-600 flex items-start gap-2 mt-1">
+                <MapPin className="h-5 w-5 mt-1 text-gray-400 flex-shrink-0" />
                 {formatAddress(property?.address)}
               </p>
+
               <div className="flex flex-wrap items-center gap-3 mt-4">
                 {getStatus() === "vacant" ? (
                   <Badge

@@ -57,11 +57,21 @@ export default function EditLeaseDialog({
     const { id, value } = e.target;
     const fieldName = id.replace("lease-", "");
 
+    console.log(`Field changed: ${fieldName}, value: ${value}`); // Debug logging
+
     // Handle numeric fields
     if (fieldName === "rent_amount" || fieldName === "security_deposit") {
       setFormState((prev) => ({
         ...prev,
         [fieldName]: parseFloat(value) || 0,
+      }));
+    }
+    // Handle date fields explicitly
+    else if (fieldName === "start" || fieldName === "end") {
+      const stateField = fieldName === "start" ? "lease_start" : "lease_end";
+      setFormState((prev) => ({
+        ...prev,
+        [stateField]: value,
       }));
     }
     // Handle payment_due_day (needs to be a number)
@@ -171,6 +181,7 @@ export default function EditLeaseDialog({
               <Input
                 id="lease-start"
                 type="date"
+                className="bg-white"
                 value={formState.lease_start}
                 onChange={handleInputChange}
               />
@@ -182,6 +193,7 @@ export default function EditLeaseDialog({
               <Input
                 id="lease-end"
                 type="date"
+                className="bg-white"
                 value={formState.lease_end}
                 onChange={handleInputChange}
               />
@@ -194,7 +206,7 @@ export default function EditLeaseDialog({
             </label>
             <select
               id="lease-currency"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-white"
               value={formState.currency}
               onChange={handleInputChange}
             >
@@ -220,7 +232,7 @@ export default function EditLeaseDialog({
                 <Input
                   id="lease-rent_amount"
                   type="number"
-                  className="pl-9"
+                  className="pl-9 bg-white"
                   placeholder="0.00"
                   value={formState.rent_amount || ""}
                   onChange={handleInputChange}
@@ -241,7 +253,7 @@ export default function EditLeaseDialog({
                 <Input
                   id="lease-security_deposit"
                   type="number"
-                  className="pl-9"
+                  className="pl-9 bg-white"
                   placeholder="0.00"
                   value={formState.security_deposit || ""}
                   onChange={handleInputChange}
@@ -257,7 +269,7 @@ export default function EditLeaseDialog({
               </label>
               <select
                 id="lease-frequency"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-white"
                 value={formState.payment_frequency}
                 onChange={handleInputChange}
               >
@@ -274,7 +286,7 @@ export default function EditLeaseDialog({
               </label>
               <select
                 id="lease-due-day"
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-white"
                 value={formState.payment_due_day}
                 onChange={handleInputChange}
               >
@@ -293,7 +305,7 @@ export default function EditLeaseDialog({
             </label>
             <select
               id="lease-status"
-              className="w-full p-2 border rounded-md"
+              className="w-full p-2 border rounded-md bg-white"
               value={formState.status}
               onChange={handleInputChange}
             >
