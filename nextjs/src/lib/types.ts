@@ -145,6 +145,8 @@ export type Database = {
           payment_frequency: string | null;
           property_id: string | null;
           rent_amount: number;
+          currency: string | null;
+          payment_due_day?: number;
           security_deposit: number | null;
           status: string | null;
           tenant_id: string | null;
@@ -158,6 +160,8 @@ export type Database = {
           payment_frequency?: string | null;
           property_id?: string | null;
           rent_amount: number;
+          currency: string | null;
+          payment_due_day?: number;
           security_deposit?: number | null;
           status?: string | null;
           tenant_id?: string | null;
@@ -171,6 +175,8 @@ export type Database = {
           payment_frequency?: string | null;
           property_id?: string | null;
           rent_amount?: number;
+          currency: string | null;
+          payment_due_day?: number;
           security_deposit?: number | null;
           status?: string | null;
           tenant_id?: string | null;

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import SearchBar from "@/components/SearchBar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -41,13 +42,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="lg:pl-64">
         {/* Topbar */}
         <div className="sticky top-0 z-10 flex items-center justify-between h-16 bg-white shadow-sm px-4">
+          <SearchBar />
           <button
             onClick={toggleSidebar}
             className="lg:hidden text-gray-500 hover:text-gray-700"
           >
             <Menu className="h-6 w-6" />
           </button>
-
           <div className="relative ml-auto">
             <button
               onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}

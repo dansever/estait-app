@@ -9,14 +9,12 @@ import { createSPASassClient } from "@/lib/supabase/client";
 import {
   User,
   Calendar,
-  DollarSign,
   FileText,
   Phone,
   Mail,
   UserCog,
   Clock,
   ClipboardEdit,
-  UserPlus,
   CheckCircle,
   AlertCircle,
   FileSignature,
@@ -90,6 +88,7 @@ export default function PropertyLease({
   const [showAddTenantDialog, setShowAddTenantDialog] = useState(false);
   const [showEditLeaseDialog, setShowEditLeaseDialog] = useState(false);
   const [submittingTenant, setSubmittingTenant] = useState(false);
+  const [submittingLease, setSubmittingLease] = useState(false);
   const [newTenant, setNewTenant] = useState<NewTenantFormState>({
     first_name: "",
     last_name: "",
@@ -104,6 +103,134 @@ export default function PropertyLease({
       .slice(0, 10),
     notes: "",
   });
+
+  // State for edit lease form
+  const [editLeaseForm, setEditLeaseForm] = useState({
+    lease_start: "",
+    lease_end: "",
+    rent_amount: 0,
+    security_deposit: 0,
+    payment_frequency: "monthly",
+    payment_due_day: 1,
+    status: "active",
+    currency: "USD",
+  });
+
+  // Initialize edit lease form when lease data is available or when dialog opens
+  useEffect(() => {
+    if (lease && showEditLeaseDialog) {
+      setEditLeaseForm({
+        lease_start: lease.lease_start || "",
+        lease_end: lease.lease_end || "",
+        rent_amount: lease.rent_amount || 0,
+        security_deposit: lease.security_deposit || 0,
+        payment_frequency: lease.payment_frequency || "monthly",
+        payment_due_day: lease.payment_due_day || 1,
+        status: lease.status || "active",
+        currency: lease.currency || "USD",
+      });
+    }
+  }, [lease, showEditLeaseDialog]);
+
+  // Handle input change for edit lease form
+  const handleEditLeaseInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { id, value } = e.target;
+    const fieldName = id.replace("lease-", "");
+
+    // Handle numeric fields
+    if (fieldName === "rent_amount" || fieldName === "security_deposit") {
+      setEditLeaseForm((prev) => ({
+        ...prev,
+        [fieldName]: parseFloat(value) || 0,
+      }));
+    }
+    // Handle payment_due_day (needs to be a number)
+    else if (fieldName === "due-day") {
+      setEditLeaseForm((prev) => ({
+        ...prev,
+        payment_due_day: parseInt(value) || 1,
+      }));
+    }
+    // Handle frequency which maps to payment_frequency
+    else if (fieldName === "frequency") {
+      setEditLeaseForm((prev) => ({
+        ...prev,
+        payment_frequency: value,
+      }));
+    }
+    // Handle all other fields
+    else {
+      setEditLeaseForm((prev) => ({
+        ...prev,
+        [fieldName]: value,
+      }));
+    }
+  };
+
+  // Handle editing lease submission
+  const handleEditLeaseSubmit = async () => {
+    try {
+      setSubmittingLease(true);
+
+      // Validation
+      if (!editLeaseForm.lease_start || !editLeaseForm.lease_end) {
+        toast.error("Lease start and end dates are required");
+        return;
+      }
+
+      if (!editLeaseForm.rent_amount || editLeaseForm.rent_amount <= 0) {
+        toast.error("Please enter a valid rent amount");
+        return;
+      }
+
+      if (
+        new Date(editLeaseForm.lease_end) <= new Date(editLeaseForm.lease_start)
+      ) {
+        toast.error("Lease end date must be after start date");
+        return;
+      }
+
+      if (!lease?.id) {
+        toast.error("No lease found to update");
+        return;
+      }
+
+      const supabase = await createSPASassClient();
+
+      // Update the lease in Supabase
+      const { data: updatedLease, error } = await supabase
+        .from("leases")
+        .update({
+          lease_start: editLeaseForm.lease_start,
+          lease_end: editLeaseForm.lease_end,
+          rent_amount: editLeaseForm.rent_amount,
+          security_deposit: editLeaseForm.security_deposit,
+          payment_frequency: editLeaseForm.payment_frequency,
+          payment_due_day: editLeaseForm.payment_due_day,
+          status: editLeaseForm.status,
+          currency: editLeaseForm.currency,
+        })
+        .eq("id", lease.id)
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(`Error updating lease: ${error.message}`);
+      }
+
+      // Success - update local state with updated lease
+      toast.success("Lease updated successfully");
+      setLease(updatedLease);
+      setShowEditLeaseDialog(false);
+    } catch (error) {
+      console.error("Error updating lease:", error);
+      toast.error("Failed to update lease. Please try again.");
+    } finally {
+      setSubmittingLease(false);
+    }
+  };
 
   // Fetch lease info for this property
   useEffect(() => {
@@ -477,14 +604,12 @@ export default function PropertyLease({
                   <div>
                     <p className="text-sm text-gray-500">Monthly Rent</p>
                     <p className="font-medium flex items-center mt-1">
-                      <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
                       {formatCurrency(lease.rent_amount, lease.currency)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Security Deposit</p>
                     <p className="font-medium flex items-center mt-1">
-                      <DollarSign className="h-4 w-4 mr-2 text-gray-400" />
                       {formatCurrency(
                         lease.security_deposit || lease.rent_amount,
                         lease.currency
@@ -802,7 +927,6 @@ export default function PropertyLease({
                     Monthly Rent
                   </label>
                   <div className="relative">
-                    <DollarSign className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                     <Input
                       id="tenant-rent_amount"
                       type="number"
@@ -821,7 +945,6 @@ export default function PropertyLease({
                     Security Deposit
                   </label>
                   <div className="relative">
-                    <DollarSign className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                     <Input
                       id="tenant-security_deposit"
                       type="number"
@@ -882,7 +1005,8 @@ export default function PropertyLease({
                 <Input
                   id="lease-start"
                   type="date"
-                  defaultValue={lease?.lease_start}
+                  value={editLeaseForm.lease_start}
+                  onChange={handleEditLeaseInputChange}
                 />
               </div>
               <div className="space-y-2">
@@ -892,39 +1016,63 @@ export default function PropertyLease({
                 <Input
                   id="lease-end"
                   type="date"
-                  defaultValue={lease?.lease_end}
+                  value={editLeaseForm.lease_end}
+                  onChange={handleEditLeaseInputChange}
                 />
               </div>
             </div>
 
+            <div className="space-y-2">
+              <label htmlFor="lease-currency" className="text-sm font-medium">
+                Currency
+              </label>
+              <select
+                id="lease-currency"
+                className="w-full p-2 border rounded-md"
+                value={editLeaseForm.currency}
+                onChange={handleEditLeaseInputChange}
+              >
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="NIS">NIS (₪)</option>
+              </select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label htmlFor="lease-rent" className="text-sm font-medium">
+                <label
+                  htmlFor="lease-rent_amount"
+                  className="text-sm font-medium"
+                >
                   Monthly Rent
                 </label>
                 <div className="relative">
-                  <DollarSign className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                   <Input
-                    id="lease-rent"
+                    id="lease-rent_amount"
                     type="number"
                     className="pl-9"
-                    defaultValue={lease?.rent_amount}
                     placeholder="0.00"
+                    value={editLeaseForm.rent_amount || ""}
+                    onChange={handleEditLeaseInputChange}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <label htmlFor="lease-deposit" className="text-sm font-medium">
+                <label
+                  htmlFor="lease-security_deposit"
+                  className="text-sm font-medium"
+                >
                   Security Deposit
                 </label>
                 <div className="relative">
-                  <DollarSign className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" />
                   <Input
-                    id="lease-deposit"
+                    id="lease-security_deposit"
                     type="number"
                     className="pl-9"
-                    defaultValue={lease?.security_deposit}
                     placeholder="0.00"
+                    value={editLeaseForm.security_deposit || ""}
+                    onChange={handleEditLeaseInputChange}
                   />
                 </div>
               </div>
@@ -941,7 +1089,8 @@ export default function PropertyLease({
                 <select
                   id="lease-frequency"
                   className="w-full p-2 border rounded-md"
-                  defaultValue={lease?.payment_frequency || "monthly"}
+                  value={editLeaseForm.payment_frequency}
+                  onChange={handleEditLeaseInputChange}
                 >
                   <option value="monthly">Monthly</option>
                   <option value="weekly">Weekly</option>
@@ -957,7 +1106,8 @@ export default function PropertyLease({
                 <select
                   id="lease-due-day"
                   className="w-full p-2 border rounded-md"
-                  defaultValue={lease?.payment_due_day || 1}
+                  value={editLeaseForm.payment_due_day}
+                  onChange={handleEditLeaseInputChange}
                 >
                   {[...Array(31)].map((_, i) => (
                     <option key={i} value={i + 1}>
@@ -975,7 +1125,8 @@ export default function PropertyLease({
               <select
                 id="lease-status"
                 className="w-full p-2 border rounded-md"
-                defaultValue={lease?.status || "active"}
+                value={editLeaseForm.status}
+                onChange={handleEditLeaseInputChange}
               >
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
@@ -988,10 +1139,15 @@ export default function PropertyLease({
             <Button
               variant="outline"
               onClick={() => setShowEditLeaseDialog(false)}
+              disabled={submittingLease}
             >
               Cancel
             </Button>
-            <Button>{lease ? "Update" : "Create"} Lease</Button>
+            <Button onClick={handleEditLeaseSubmit} disabled={submittingLease}>
+              {submittingLease
+                ? "Updating..."
+                : (lease ? "Update" : "Create") + " Lease"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
