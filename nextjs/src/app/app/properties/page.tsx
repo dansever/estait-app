@@ -36,12 +36,32 @@ import {
   AlertCircle,
   CheckCircle,
   Copy,
+  Plus,
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { FileObject } from "@supabase/storage-js";
+import PropertyCard from "@/components/property/property-card";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
-export default function FileManagementPage() {
+// Define the Property interface based on the PropertyCard props
+interface Property {
+  id: string;
+  image: string;
+  title: string;
+  address: string;
+  status: "vacant" | "rented";
+  rentalPrice: number;
+}
+
+export default function PropertiesPage() {
   const { user } = useGlobal();
+  const router = useRouter();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [propertiesLoading, setPropertiesLoading] = useState(true);
+  const [propertiesError, setPropertiesError] = useState("");
+
+  // File management state
   const [files, setFiles] = useState<FileObject[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -56,9 +76,48 @@ export default function FileManagementPage() {
 
   useEffect(() => {
     if (user?.id) {
+      loadProperties();
       loadFiles();
     }
   }, [user]);
+
+  const loadProperties = async () => {
+    try {
+      setPropertiesLoading(true);
+      setPropertiesError("");
+      const supabase = await createSPASassClient();
+
+      // Fetch properties from the properties table
+      const { data, error } = await supabase
+        .from("properties")
+        .select("*")
+        .eq("user_id", user!.id);
+
+      if (error) throw error;
+
+      // Transform data to match PropertyCard props if needed
+      const formattedProperties: Property[] =
+        data?.map((property) => ({
+          id: property.id,
+          image: property.image_url || "/placeholder-property.jpg", // Fallback image
+          title: property.title || property.name,
+          address: property.address,
+          status: property.status || "vacant",
+          rentalPrice: property.rental_price || 0,
+        })) || [];
+
+      setProperties(formattedProperties);
+    } catch (err) {
+      setPropertiesError("Failed to load properties");
+      console.error("Error loading properties:", err);
+    } finally {
+      setPropertiesLoading(false);
+    }
+  };
+
+  const handleAddProperty = () => {
+    router.push("/app/properties/new");
+  };
 
   const loadFiles = async () => {
     try {
@@ -77,6 +136,7 @@ export default function FileManagementPage() {
     }
   };
 
+  // File management handlers
   const handleFileUpload = async (file: File) => {
     try {
       setUploading(true);
@@ -208,6 +268,67 @@ export default function FileManagementPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Properties Section */}
+      <div className="mb-8">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold">My Properties</h2>
+          <Button
+            onClick={handleAddProperty}
+            className="flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" /> Add Property
+          </Button>
+        </div>
+
+        {propertiesError && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{propertiesError}</AlertDescription>
+          </Alert>
+        )}
+
+        {propertiesLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="h-[320px] animate-pulse">
+                <div className="h-48 w-full bg-gray-200 rounded-t-lg"></div>
+                <CardHeader>
+                  <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-6 bg-gray-200 rounded w-1/4"></div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : properties.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {properties.map((property) => (
+              <PropertyCard
+                key={property.id}
+                id={property.id}
+                image={property.image}
+                title={property.title}
+                address={property.address}
+                status={property.status}
+                rentalPrice={property.rentalPrice}
+              />
+            ))}
+          </div>
+        ) : (
+          <Card className="bg-gray-50 border-dashed border-2">
+            <CardContent className="flex flex-col items-center justify-center p-10">
+              <p className="text-gray-500 mb-4">No properties found</p>
+              <Button onClick={handleAddProperty}>
+                Add Your First Property
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* File Management Section */}
       <Card>
         <CardHeader>
           <CardTitle>File Management</CardTitle>
