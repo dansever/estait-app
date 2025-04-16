@@ -93,63 +93,6 @@ export default function PropertyFinancials({
 
         if (error) throw error;
 
-        // Mock data for development
-        const mockTransactions: Transaction[] = [
-          {
-            id: "1",
-            transaction_date: new Date().toISOString(),
-            amount: 1200,
-            category: "Rent",
-            description: "Monthly rent payment",
-            type: "income",
-            status: "completed",
-          },
-          {
-            id: "2",
-            transaction_date: new Date(
-              Date.now() - 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            amount: 200,
-            category: "Maintenance",
-            description: "Plumbing repair",
-            type: "expense",
-            status: "completed",
-          },
-          {
-            id: "3",
-            transaction_date: new Date(
-              Date.now() - 14 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            amount: 1200,
-            category: "Rent",
-            description: "Monthly rent payment",
-            type: "income",
-            status: "completed",
-          },
-          {
-            id: "4",
-            transaction_date: new Date(
-              Date.now() - 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            amount: 150,
-            category: "Utilities",
-            description: "Water bill",
-            type: "expense",
-            status: "pending",
-          },
-          {
-            id: "5",
-            transaction_date: new Date(
-              Date.now() - 45 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            amount: 1200,
-            category: "Rent",
-            description: "Monthly rent payment",
-            type: "income",
-            status: "completed",
-          },
-        ];
-
         setTransactions(mockTransactions);
 
         // Calculate financial summary

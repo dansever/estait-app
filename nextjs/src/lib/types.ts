@@ -145,9 +145,9 @@ export type Database = {
           payment_frequency: string | null;
           property_id: string | null;
           rent_amount: number;
-          currency: string | null;
+          currency: string;
           payment_due_day?: number;
-          security_deposit: number | null;
+          security_deposit: number;
           status: string | null;
           tenant_id: string | null;
         };
@@ -160,9 +160,9 @@ export type Database = {
           payment_frequency?: string | null;
           property_id?: string | null;
           rent_amount: number;
-          currency: string | null;
+          currency: string;
           payment_due_day?: number;
-          security_deposit?: number | null;
+          security_deposit?: number;
           status?: string | null;
           tenant_id?: string | null;
         };
@@ -175,9 +175,9 @@ export type Database = {
           payment_frequency?: string | null;
           property_id?: string | null;
           rent_amount?: number;
-          currency: string | null;
+          currency: string;
           payment_due_day?: number;
-          security_deposit?: number | null;
+          security_deposit?: number;
           status?: string | null;
           tenant_id?: string | null;
         };
@@ -245,7 +245,7 @@ export type Database = {
           bathrooms: number | null;
           bedrooms: number | null;
           created_at: string | null;
-          currency: string | null;
+          currency: string;
           id: string;
           notes: string | null;
           owner_id: string | null;
@@ -261,7 +261,7 @@ export type Database = {
           bathrooms?: number | null;
           bedrooms?: number | null;
           created_at?: string | null;
-          currency?: string | null;
+          currency?: string;
           id?: string;
           notes?: string | null;
           owner_id?: string | null;
@@ -277,7 +277,7 @@ export type Database = {
           bathrooms?: number | null;
           bedrooms?: number | null;
           created_at?: string | null;
-          currency?: string | null;
+          currency?: string;
           id?: string;
           notes?: string | null;
           owner_id?: string | null;

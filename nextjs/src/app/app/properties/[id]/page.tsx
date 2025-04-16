@@ -27,6 +27,12 @@ import PropertyDocuments from "./sections/documents";
 import PropertyFinancials from "./sections/financials";
 import PropertyMaintenance from "./sections/maintenance";
 
+// Import utilities for currency formatting
+import {
+  getCurrencySymbol,
+  formatCurrency,
+} from "@/components/property/lease/lease-utils";
+
 type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
   address?: {
     street: string | null;
@@ -40,11 +46,18 @@ type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
     lease_start: string | null;
     lease_end: string | null;
     rent_amount: number | null;
+    security_deposit: number | null;
+    payment_due_day: number | null;
+    payment_frequency: string | null;
+    currency: string;
     status: string | null;
+    tenant_id: string | null;
     tenant?: {
       id: string;
       first_name: string | null;
       last_name: string | null;
+      email: string | null;
+      phone: string | null;
     } | null;
   } | null;
 };
@@ -60,81 +73,88 @@ export default function PropertyDetailsPage() {
   const [propertyImage, setPropertyImage] = useState<string | null>(null);
 
   // Fetch property data with related details
-  useEffect(() => {
-    async function fetchPropertyDetails() {
-      try {
-        setIsLoading(true);
-        setError(null);
+  const fetchPropertyDetails = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-        // Get base property data
-        const propertyData = await getPropertyById(propertyId);
-        if (!propertyData) {
-          setError("Property not found");
-          return;
-        }
-
-        // Set a placeholder image
-        const imageIndex = Math.floor(Math.random() * 4) + 1;
-        setPropertyImage(`/stock_photos/apartment_${imageIndex}.jpg`);
-
-        // Fetch related data
-        const supabase = await createSPASassClient();
-
-        // Get address
-        let address = null;
-        if (propertyData.address_id) {
-          const { data: addressData } = await supabase
-            .from("addresses")
-            .select("*")
-            .eq("id", propertyData.address_id)
-            .single();
-          address = addressData;
-        }
-
-        // Get current lease and tenant
-        let lease = null;
-        const currentDate = new Date().toISOString();
-        const { data: leaseData } = await supabase
-          .from("leases")
-          .select(
-            `
-            id,
-            lease_start,
-            lease_end,
-            rent_amount,
-            status,
-            tenant:tenant_id (
-              id,
-              first_name,
-              last_name
-            )
-          `
-          )
-          .eq("property_id", propertyId)
-          .lte("lease_start", currentDate)
-          .gte("lease_end", currentDate)
-          .order("lease_start", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (leaseData) {
-          lease = leaseData;
-        }
-
-        // Combine all data
-        setProperty({
-          ...propertyData,
-          address,
-          current_lease: lease,
-        });
-      } catch (err) {
-        console.error("Error fetching property details:", err);
-        setError("Failed to load property details");
-      } finally {
-        setIsLoading(false);
+      // Get base property data
+      const propertyData = await getPropertyById(propertyId);
+      if (!propertyData) {
+        setError("Property not found");
+        return;
       }
-    }
 
+      // Set a placeholder image
+      const imageIndex = Math.floor(Math.random() * 4) + 1;
+      setPropertyImage(`/stock_photos/apartment_${imageIndex}.jpg`);
+
+      // Fetch related data
+      const supabase = await createSPASassClient();
+
+      // Get address
+      let address = null;
+      if (propertyData.address_id) {
+        const { data: addressData } = await supabase
+          .from("addresses")
+          .select("*")
+          .eq("id", propertyData.address_id)
+          .single();
+        address = addressData;
+      }
+
+      // Get current lease and tenant with ALL fields
+      let lease = null;
+      const currentDate = new Date().toISOString();
+      const { data: leaseData } = await supabase
+        .from("leases")
+        .select(
+          `
+          id,
+          lease_start,
+          lease_end,
+          rent_amount,
+          security_deposit,
+          payment_due_day,
+          payment_frequency,
+          currency,
+          status,
+          tenant_id,
+          tenant:tenant_id (
+            id,
+            first_name,
+            last_name,
+            email,
+            phone
+          )
+        `
+        )
+        .eq("property_id", propertyId)
+        .lte("lease_start", currentDate)
+        .gte("lease_end", currentDate)
+        .order("lease_start", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (leaseData) {
+        lease = leaseData;
+      }
+
+      // Combine all data
+      setProperty({
+        ...propertyData,
+        address,
+        current_lease: lease,
+      });
+    } catch (err) {
+      console.error("Error fetching property details:", err);
+      setError("Failed to load property details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (propertyId) {
       fetchPropertyDetails();
     }
@@ -176,6 +196,7 @@ export default function PropertyDetailsPage() {
           propertyId={propertyId}
           lease={property?.current_lease}
           isLoading={isLoading}
+          onDataChanged={fetchPropertyDetails}
         />
       ),
     },
@@ -286,7 +307,11 @@ export default function PropertyDetailsPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">Rent:</span>
                     <span className="font-medium">
-                      ${property?.current_lease?.rent_amount}/month
+                      {formatCurrency(
+                        property.current_lease.rent_amount,
+                        property.current_lease.currency
+                      )}
+                      /{property.current_lease.payment_frequency || "month"}
                     </span>
                   </div>
                 )}
