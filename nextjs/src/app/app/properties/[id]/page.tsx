@@ -252,51 +252,58 @@ export default function PropertyDetailsPage() {
             </div>
           </div>
         ) : (
-          <>
-            {propertyImage && (
-              <img
-                src={propertyImage}
-                alt="Property"
-                className="w-full h-64 object-cover rounded-lg mb-4"
-              />
-            )}
-            <h1 className="text-3xl font-bold">{property?.title}</h1>
-            <p className="text-lg text-gray-600 flex items-center mt-1">
-              <MapPin className="h-4 w-4 text-gray-500 mr-1" />
-              {formatAddress(property?.address)}
-            </p>
-            <div className="flex flex-wrap items-center gap-3 mt-4">
-              {getStatus() === "vacant" ? (
-                <Badge
-                  variant="outline"
-                  className="border-yellow-500 text-yellow-600"
-                >
-                  Vacant
-                </Badge>
-              ) : (
-                <Badge className="bg-green-600">Rented</Badge>
-              )}
+          <div className="flex flex-col-reverse md:flex-row gap-6 items-start">
+            {/* Left side - Property details */}
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold">{property?.title}</h1>
+              <p className="text-lg text-gray-600 flex items-center mt-1">
+                <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+                {formatAddress(property?.address)}
+              </p>
+              <div className="flex flex-wrap items-center gap-3 mt-4">
+                {getStatus() === "vacant" ? (
+                  <Badge
+                    variant="outline"
+                    className="border-yellow-500 text-yellow-600"
+                  >
+                    Vacant
+                  </Badge>
+                ) : (
+                  <Badge className="bg-green-600">Rented</Badge>
+                )}
 
-              {property?.current_lease && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Tenant:</span>
-                  <span className="font-medium">
-                    {property?.current_lease?.tenant?.first_name}{" "}
-                    {property?.current_lease?.tenant?.last_name}
-                  </span>
-                </div>
-              )}
+                {property?.current_lease && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Tenant:</span>
+                    <span className="font-medium">
+                      {property?.current_lease?.tenant?.first_name}{" "}
+                      {property?.current_lease?.tenant?.last_name}
+                    </span>
+                  </div>
+                )}
 
-              {property?.current_lease?.rent_amount && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500">Rent:</span>
-                  <span className="font-medium">
-                    ${property?.current_lease?.rent_amount}/month
-                  </span>
-                </div>
-              )}
+                {property?.current_lease?.rent_amount && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Rent:</span>
+                    <span className="font-medium">
+                      ${property?.current_lease?.rent_amount}/month
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
-          </>
+
+            {/* Right side - Property image */}
+            {propertyImage && (
+              <div className="md:w-1/3 w-full mb-4 md:mb-0">
+                <img
+                  src={propertyImage}
+                  alt="Property"
+                  className="w-full h-48 object-cover rounded-lg"
+                />
+              </div>
+            )}
+          </div>
         )}
       </div>
 
