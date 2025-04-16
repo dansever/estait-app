@@ -34,29 +34,30 @@ export function NavTabs({
     }
   };
 
-  // Find the content of the active tab
   const activeTabContent = tabs.find((tab) => tab.id === activeTabId)?.content;
 
   return (
     <div className={className}>
       <div className="mb-6 flex gap-2">
-        {tabs.map((tab) => (
-          <Button
-            key={String(tab.id)}
-            variant={activeTabId === tab.id ? "default" : "secondary"}
-            onClick={() => handleTabClick(tab.id)}
-            size="sm"
-            className={
-              activeTabId === tab.id
-                ? "bg-primary-600 text-white hover:bg-primary-700"
-                : ""
-            }
-          >
-            {tab.icon &&
-              React.createElement(tab.icon, { className: "h-4 w-4 mr-2" })}
-            {tab.label}
-          </Button>
-        ))}
+        {tabs.map((tab) => {
+          const isActive = activeTabId === tab.id;
+          return (
+            <Button
+              key={String(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
+              size="sm"
+              className={`transition-colors ${
+                isActive
+                  ? "bg-[var(--color-primary)] text-[var(--color-text-inverted)] hover:bg-[var(--color-primary)]"
+                  : "bg-[var(--color-primary-100)] text-[var(--color-primary-800)] hover:bg-[var(--color-primary-200)]"
+              }`}
+            >
+              {tab.icon &&
+                React.createElement(tab.icon, { className: "h-4 w-4 mr-2" })}
+              {tab.label}
+            </Button>
+          );
+        })}
       </div>
 
       <div className="tab-content">{activeTabContent}</div>

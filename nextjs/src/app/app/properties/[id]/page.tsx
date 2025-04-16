@@ -1,0 +1,313 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { getPropertyById } from "@/lib/supabase/queries/properties";
+import { createSPASassClient } from "@/lib/supabase/client";
+import { NavTabs, TabItem } from "@/components/layout/navTabs";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Database } from "@/lib/types";
+import {
+  ArrowLeft,
+  Building2,
+  Users,
+  FileText,
+  Wallet,
+  Wrench,
+  Eye,
+  MapPin,
+} from "lucide-react";
+
+// Import section components
+import PropertyOverview from "./sections/overview";
+import PropertyLease from "./sections/lease";
+import PropertyDocuments from "./sections/documents";
+import PropertyFinancials from "./sections/financials";
+import PropertyMaintenance from "./sections/maintenance";
+
+type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
+  address?: {
+    street: string | null;
+    apartment_number: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+  } | null;
+  current_lease?: {
+    id: string;
+    lease_start: string | null;
+    lease_end: string | null;
+    rent_amount: number | null;
+    status: string | null;
+    tenant?: {
+      id: string;
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
+  } | null;
+};
+
+export default function PropertyDetailsPage() {
+  const router = useRouter();
+  const params = useParams();
+  const propertyId = params.id as string;
+
+  const [property, setProperty] = useState<PropertyWithDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch property data with related details
+  useEffect(() => {
+    async function fetchPropertyDetails() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Get base property data
+        const propertyData = await getPropertyById(propertyId);
+        if (!propertyData) {
+          setError("Property not found");
+          return;
+        }
+
+        // Fetch related data
+        const supabase = await createSPASassClient();
+
+        // Get address
+        let address = null;
+        if (propertyData.address_id) {
+          const { data: addressData } = await supabase
+            .from("addresses")
+            .select("*")
+            .eq("id", propertyData.address_id)
+            .single();
+          address = addressData;
+        }
+
+        // Get current lease and tenant
+        let lease = null;
+        const currentDate = new Date().toISOString();
+        const { data: leaseData } = await supabase
+          .from("leases")
+          .select(
+            `
+            id,
+            lease_start,
+            lease_end,
+            rent_amount,
+            status,
+            tenant:tenant_id (
+              id,
+              first_name,
+              last_name
+            )
+          `
+          )
+          .eq("property_id", propertyId)
+          .lte("lease_start", currentDate)
+          .gte("lease_end", currentDate)
+          .order("lease_start", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (leaseData) {
+          lease = leaseData;
+        }
+
+        // Combine all data
+        setProperty({
+          ...propertyData,
+          address,
+          current_lease: lease,
+        });
+      } catch (err) {
+        console.error("Error fetching property details:", err);
+        setError("Failed to load property details");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    if (propertyId) {
+      fetchPropertyDetails();
+    }
+  }, [propertyId]);
+
+  // Format full address string
+  const formatAddress = (address: any) => {
+    if (!address) return "Address not available";
+
+    const parts = [];
+    if (address.street) parts.push(address.street);
+    if (address.apartment_number) parts.push(`#${address.apartment_number}`);
+    if (address.city) parts.push(address.city);
+    if (address.state) parts.push(address.state);
+    if (address.zip_code) parts.push(address.zip_code);
+
+    return parts.join(", ");
+  };
+
+  // Determine property status based on current lease
+  const getStatus = () => {
+    return property?.current_lease ? "rented" : "vacant";
+  };
+
+  // Define the tabs for the property sections
+  const tabs: TabItem[] = [
+    {
+      id: "overview",
+      label: "Overview",
+      icon: Eye,
+      content: <PropertyOverview property={property} isLoading={isLoading} />,
+    },
+    {
+      id: "lease",
+      label: "Lease & Tenants",
+      icon: Users,
+      content: (
+        <PropertyLease
+          propertyId={propertyId}
+          lease={property?.current_lease}
+          isLoading={isLoading}
+        />
+      ),
+    },
+    {
+      id: "documents",
+      label: "Documents",
+      icon: FileText,
+      content: (
+        <PropertyDocuments propertyId={propertyId} isLoading={isLoading} />
+      ),
+    },
+    {
+      id: "financials",
+      label: "Financials",
+      icon: Wallet,
+      content: (
+        <PropertyFinancials propertyId={propertyId} isLoading={isLoading} />
+      ),
+    },
+    {
+      id: "maintenance",
+      label: "Maintenance & Tasks",
+      icon: Wrench,
+      content: (
+        <PropertyMaintenance propertyId={propertyId} isLoading={isLoading} />
+      ),
+    },
+  ];
+
+  if (error) {
+    return (
+      <div className="container py-10">
+        <div className="flex items-center mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.back()}
+            className="mr-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back
+          </Button>
+        </div>
+        <Card className="p-10 text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-2">Error</h2>
+          <p className="text-gray-600">{error}</p>
+          <Button
+            onClick={() => router.push("/app/properties")}
+            className="mt-6"
+          >
+            Return to Properties
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-6">
+      {/* Back button */}
+      <div className="flex items-center mb-6">
+        <Button variant="ghost" onClick={() => router.back()} className="mr-2">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back
+        </Button>
+      </div>
+
+      {/* Property header */}
+      <div className="mb-8">
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-1/2" />
+            <Skeleton className="h-6 w-2/3" />
+            <div className="flex space-x-4 mt-4">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-32" />
+            </div>
+          </div>
+        ) : (
+          <>
+            <h1 className="text-3xl font-bold">{property?.title}</h1>
+            <p className="text-lg text-gray-600 flex items-center mt-1">
+              <MapPin className="h-4 w-4 text-gray-500 mr-1" />
+              {formatAddress(property?.address)}
+            </p>
+            <div className="flex flex-wrap items-center gap-3 mt-4">
+              {getStatus() === "vacant" ? (
+                <Badge
+                  variant="outline"
+                  className="border-yellow-500 text-yellow-600"
+                >
+                  Vacant
+                </Badge>
+              ) : (
+                <Badge className="bg-green-600">Rented</Badge>
+              )}
+
+              {property?.current_lease && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Tenant:</span>
+                  <span className="font-medium">
+                    {property?.current_lease?.tenant?.first_name}{" "}
+                    {property?.current_lease?.tenant?.last_name}
+                  </span>
+                </div>
+              )}
+
+              {property?.current_lease?.rent_amount && (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500">Rent:</span>
+                  <span className="font-medium">
+                    ${property?.current_lease?.rent_amount}/month
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Property content tabs */}
+      <div>
+        {isLoading ? (
+          <div className="space-y-4">
+            <div className="flex space-x-2">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Skeleton key={i} className="h-10 w-32" />
+              ))}
+            </div>
+            <Skeleton className="h-64 w-full mt-6" />
+          </div>
+        ) : (
+          <NavTabs
+            tabs={tabs}
+            defaultTabId="overview"
+            className="border-t pt-6"
+          />
+        )}
+      </div>
+    </div>
+  );
+}

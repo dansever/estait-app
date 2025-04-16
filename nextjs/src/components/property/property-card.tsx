@@ -37,7 +37,7 @@ export default function PropertyCard({
   const router = useRouter();
 
   const handleClick = () => {
-    router.push(`/properties/${id}`);
+    router.push(`/app/properties/${id}`);
   };
 
   return (
