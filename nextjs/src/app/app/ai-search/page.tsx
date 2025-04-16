@@ -11,130 +11,21 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { CheckCircle, Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
+  Activity,
+  Loader2,
+  AlertCircle,
+  ListChecks,
+  CheckCheck,
+} from "lucide-react";
 import Confetti from "@/components/Confetti";
 import { NavTabs, TabItem } from "@/components/layout/navTabs";
-import { ListChecks, CheckCheck } from "lucide-react";
+import TaskList from "@/components/TaskList";
+import CreateTaskDialog from "@/components/CreateTaskDialog";
 
 import { Database } from "@/lib/types";
 
 type Task = Database["public"]["Tables"]["todo_list"]["Row"];
-type NewTask = Database["public"]["Tables"]["todo_list"]["Insert"];
-
-interface CreateTaskDialogProps {
-  onTaskCreated: () => Promise<void>;
-}
-
-function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
-  const { user } = useGlobal();
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [newTaskTitle, setNewTaskTitle] = useState<string>("");
-  const [newTaskDescription, setNewTaskDescription] = useState<string>("");
-  const [isUrgent, setIsUrgent] = useState<boolean>(false);
-
-  const handleAddTask = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim() || !user?.id) return;
-
-    try {
-      setLoading(true);
-      const supabase = await createSPASassClient();
-      const newTask: NewTask = {
-        title: newTaskTitle.trim(),
-        description: newTaskDescription.trim() || null,
-        urgent: isUrgent,
-        owner: user.id,
-        done: false,
-      };
-
-      const { error: supabaseError } = await supabase.createTask(newTask);
-      if (supabaseError) throw supabaseError;
-
-      setNewTaskTitle("");
-      setNewTaskDescription("");
-      setIsUrgent(false);
-      setOpen(false);
-      await onTaskCreated();
-    } catch (err) {
-      setError("Failed to add task");
-      console.error("Error adding task:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-primary-600 text-white hover:bg-primary-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add Task
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Task</DialogTitle>
-        </DialogHeader>
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <form onSubmit={handleAddTask} className="space-y-4">
-          <div className="space-y-2">
-            <Input
-              type="text"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              placeholder="Task title"
-              required
-            />
-          </div>
-          <div className="space-y-2">
-            <Textarea
-              value={newTaskDescription}
-              onChange={(e) => setNewTaskDescription(e.target.value)}
-              placeholder="Task description (optional)"
-              rows={3}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={isUrgent}
-                onChange={(e) => setIsUrgent(e.target.checked)}
-                className="rounded border-gray-300 focus:ring-primary-500"
-              />
-              <span className="text-sm">Mark as urgent</span>
-            </label>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="bg-primary-600 text-white hover:bg-primary-700"
-            >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Task
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function TaskManagementPage() {
   const { user } = useGlobal();
@@ -218,133 +109,24 @@ export default function TaskManagementPage() {
       label: "All Tasks",
       icon: ListChecks,
       content: (
-        <div className="space-y-3 relative">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className={`p-4 border rounded-lg transition-colors ${
-                task.done ? "bg-muted" : "bg-card"
-              } ${
-                task.urgent && !task.done ? "border-red-200" : "border-border"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3
-                    className={`font-medium ${
-                      task.done ? "line-through text-muted-foreground" : ""
-                    }`}
-                  >
-                    {task.title}
-                  </h3>
-                  {task.description && (
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {task.description}
-                    </p>
-                  )}
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      Created: {new Date(task.created_at).toLocaleDateString()}
-                    </span>
-                    {task.urgent && !task.done && (
-                      <span className="px-2 py-0.5 text-xs bg-red-50 text-red-600 rounded-full">
-                        Urgent
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {!task.done && (
-                    <Button
-                      onClick={() => handleMarkAsDone(task.id)}
-                      variant="ghost"
-                      size="icon"
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                    >
-                      <CheckCircle className="h-5 w-5" />
-                    </Button>
-                  )}
-                  <Button
-                    onClick={() => handleRemoveTask(task.id)}
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <TaskList
+          tasks={tasks}
+          onMarkDone={handleMarkAsDone}
+          onRemove={handleRemoveTask}
+        />
       ),
     },
     {
       id: false,
       label: "Active",
+      icon: Activity,
       content: (
-        <div className="space-y-3 relative">
-          {tasks
-            .filter((task) => !task.done)
-            .map((task) => (
-              <div
-                key={task.id}
-                className={`p-4 border rounded-lg transition-colors ${
-                  task.done ? "bg-muted" : "bg-card"
-                } ${
-                  task.urgent && !task.done ? "border-red-200" : "border-border"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className={`font-medium ${
-                        task.done ? "line-through text-muted-foreground" : ""
-                      }`}
-                    >
-                      {task.title}
-                    </h3>
-                    {task.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {task.description}
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        Created:{" "}
-                        {new Date(task.created_at).toLocaleDateString()}
-                      </span>
-                      {task.urgent && !task.done && (
-                        <span className="px-2 py-0.5 text-xs bg-red-50 text-red-600 rounded-full">
-                          Urgent
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {!task.done && (
-                      <Button
-                        onClick={() => handleMarkAsDone(task.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => handleRemoveTask(task.id)}
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
+        <TaskList
+          tasks={tasks}
+          filter={false}
+          onMarkDone={handleMarkAsDone}
+          onRemove={handleRemoveTask}
+        />
       ),
     },
     {
@@ -352,68 +134,12 @@ export default function TaskManagementPage() {
       label: "Completed",
       icon: CheckCheck,
       content: (
-        <div className="space-y-3 relative">
-          {tasks
-            .filter((task) => task.done)
-            .map((task) => (
-              <div
-                key={task.id}
-                className={`p-4 border rounded-lg transition-colors ${
-                  task.done ? "bg-muted" : "bg-card"
-                } ${
-                  task.urgent && !task.done ? "border-red-200" : "border-border"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3
-                      className={`font-medium ${
-                        task.done ? "line-through text-muted-foreground" : ""
-                      }`}
-                    >
-                      {task.title}
-                    </h3>
-                    {task.description && (
-                      <p className="mt-1 text-sm text-muted-foreground">
-                        {task.description}
-                      </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
-                        Created:{" "}
-                        {new Date(task.created_at).toLocaleDateString()}
-                      </span>
-                      {task.urgent && !task.done && (
-                        <span className="px-2 py-0.5 text-xs bg-red-50 text-red-600 rounded-full">
-                          Urgent
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {!task.done && (
-                      <Button
-                        onClick={() => handleMarkAsDone(task.id)}
-                        variant="ghost"
-                        size="icon"
-                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                      >
-                        <CheckCircle className="h-5 w-5" />
-                      </Button>
-                    )}
-                    <Button
-                      onClick={() => handleRemoveTask(task.id)}
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
+        <TaskList
+          tasks={tasks}
+          filter={true}
+          onMarkDone={handleMarkAsDone}
+          onRemove={handleRemoveTask}
+        />
       ),
     },
   ];
