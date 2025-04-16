@@ -43,9 +43,34 @@ import { FileObject } from "@supabase/storage-js";
 import PropertyCard from "@/components/property/property-card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";
+import { Database } from "@/lib/types";
 
-// Define the Property interface based on the PropertyCard props
-interface Property {
+// Stock photos for placeholders
+const STOCK_PHOTOS = [
+  "/stock_photos/apartment_1.jpg",
+  "/stock_photos/apartment_2.jpg",
+  "/stock_photos/apartment_3.jpg",
+  "/stock_photos/apartment_4.jpg",
+];
+
+type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
+  address?: {
+    street: string | null;
+    apartment_number: string | null;
+    city: string | null;
+    state: string | null;
+    zip_code: string | null;
+  } | null;
+  current_lease?: {
+    rent_amount: number | null;
+    status: string | null;
+  } | null;
+  image_url?: string | null;
+};
+
+// Interface for the PropertyCard component
+interface PropertyCardData {
   id: string;
   image: string;
   title: string;
@@ -57,7 +82,7 @@ interface Property {
 export default function PropertiesPage() {
   const { user } = useGlobal();
   const router = useRouter();
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [properties, setProperties] = useState<PropertyCardData[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
   const [propertiesError, setPropertiesError] = useState("");
 
@@ -85,26 +110,100 @@ export default function PropertiesPage() {
     try {
       setPropertiesLoading(true);
       setPropertiesError("");
+
+      if (!user?.id) return;
+
+      // Fetch properties using the query function
+      const propertiesData = await getPropertiesByOwner(user.id);
+
+      // Fetch additional details for each property (addresses and leases)
       const supabase = await createSPASassClient();
+      const propertiesWithDetails: PropertyWithDetails[] = await Promise.all(
+        propertiesData.map(async (property) => {
+          // Get address if exists
+          let address = null;
+          if (property.address_id) {
+            const { data: addressData } = await supabase
+              .from("addresses")
+              .select("*")
+              .eq("id", property.address_id)
+              .single();
+            address = addressData;
+          }
 
-      // Fetch properties from the properties table
-      const { data, error } = await supabase
-        .from("properties")
-        .select("*")
-        .eq("user_id", user!.id);
+          // Get current lease if exists
+          let lease = null;
+          const currentDate = new Date().toISOString();
+          const { data: leaseData } = await supabase
+            .from("leases")
+            .select("*")
+            .eq("property_id", property.id)
+            .lte("lease_start", currentDate)
+            .gte("lease_end", currentDate)
+            .order("lease_start", { ascending: false })
+            .limit(1)
+            .single();
 
-      if (error) throw error;
+          if (leaseData) {
+            lease = leaseData;
+          }
 
-      // Transform data to match PropertyCard props if needed
-      const formattedProperties: Property[] =
-        data?.map((property) => ({
-          id: property.id,
-          image: property.image_url || "/placeholder-property.jpg", // Fallback image
-          title: property.title || property.name,
-          address: property.address,
-          status: property.status || "vacant",
-          rentalPrice: property.rental_price || 0,
-        })) || [];
+          // Get property image if exists
+          const { data: documents } = await supabase
+            .from("documents")
+            .select("*")
+            .eq("property_id", property.id)
+            .limit(1);
+
+          const image_url =
+            documents && documents.length > 0 ? documents[0].file_url : null;
+
+          return {
+            ...property,
+            address,
+            current_lease: lease,
+            image_url,
+          };
+        })
+      );
+
+      // Transform data to match PropertyCard props
+      const formattedProperties: PropertyCardData[] = propertiesWithDetails.map(
+        (property, index) => {
+          // Format address string
+          const addressParts = [];
+          if (property.address?.street)
+            addressParts.push(property.address.street);
+          if (property.address?.apartment_number)
+            addressParts.push(`#${property.address.apartment_number}`);
+          if (property.address?.city) addressParts.push(property.address.city);
+          if (property.address?.state)
+            addressParts.push(property.address.state);
+          if (property.address?.zip_code)
+            addressParts.push(property.address.zip_code);
+
+          const addressString = addressParts.join(", ");
+
+          // Determine status based on current lease
+          const status = property.current_lease ? "rented" : "vacant";
+
+          // Get rental price from current lease or default to 0
+          const rentalPrice = property.current_lease?.rent_amount || 0;
+
+          // Use stock photos as placeholders for image
+          const stockPhotoIndex = index % STOCK_PHOTOS.length;
+          const placeholderImage = STOCK_PHOTOS[stockPhotoIndex];
+
+          return {
+            id: property.id,
+            image: property.image_url || placeholderImage,
+            title: property.title,
+            address: addressString || "Address not available",
+            status: status as "vacant" | "rented",
+            rentalPrice,
+          };
+        }
+      );
 
       setProperties(formattedProperties);
     } catch (err) {

@@ -1,7 +1,15 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Building, Search, BarChart2, Settings, X } from "lucide-react";
+import {
+  Home,
+  Building,
+  Search,
+  BarChart2,
+  Settings,
+  X,
+  Component,
+} from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 
 export function AppSidebar({
@@ -21,6 +29,7 @@ export function AppSidebar({
     { name: "AI Search", href: "/app/ai-search", icon: Search },
     { name: "Analytics", href: "/app/analytics", icon: BarChart2 },
     { name: "Settings", href: "/app/settings", icon: Settings },
+    { name: "Components", href: "/app/z-components", icon: Component },
   ];
 
   return (
