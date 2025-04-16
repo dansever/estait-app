@@ -20,7 +20,7 @@ interface PropertyLeaseProps {
 }
 
 interface AddLeaseDialogProps {
-  open: boolean; // Ensure this property exists
+  open: boolean;
   onOpenChange: Dispatch<SetStateAction<boolean>>;
   propertyId: string;
   onLeaseCreated: () => Promise<void>;
