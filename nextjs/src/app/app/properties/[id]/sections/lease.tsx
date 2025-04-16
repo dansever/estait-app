@@ -34,7 +34,7 @@ import { toast } from "sonner";
 
 interface PropertyLeaseProps {
   propertyId: string;
-  lease?: any; // Accept the lease passed from the parent component
+  lease?: any;
   isLoading: boolean;
 }
 
@@ -89,6 +89,12 @@ export default function PropertyLease({
   const [showEditLeaseDialog, setShowEditLeaseDialog] = useState(false);
   const [submittingTenant, setSubmittingTenant] = useState(false);
   const [submittingLease, setSubmittingLease] = useState(false);
+  const [existingTenants, setExistingTenants] = useState<Tenant[]>([]);
+  const [loadingExistingTenants, setLoadingExistingTenants] = useState(false);
+  const [useExistingTenant, setUseExistingTenant] = useState(false);
+  const [selectedExistingTenantId, setSelectedExistingTenantId] = useState<
+    string | null
+  >(null);
   const [newTenant, setNewTenant] = useState<NewTenantFormState>({
     first_name: "",
     last_name: "",
@@ -116,6 +122,21 @@ export default function PropertyLease({
     currency: "USD",
   });
 
+  // Get currency symbol based on currency code
+  const getCurrencySymbol = (currencyCode: string): string => {
+    switch (currencyCode) {
+      case "EUR":
+        return "€";
+      case "GBP":
+        return "£";
+      case "NIS":
+      case "ILS":
+        return "₪";
+      default:
+        return "$";
+    }
+  };
+
   // Initialize edit lease form when lease data is available or when dialog opens
   useEffect(() => {
     if (lease && showEditLeaseDialog) {
@@ -131,6 +152,39 @@ export default function PropertyLease({
       });
     }
   }, [lease, showEditLeaseDialog]);
+
+  // Fetch all tenants for the logged-in user when dialog opens
+  useEffect(() => {
+    async function fetchExistingTenants() {
+      if (showAddTenantDialog) {
+        try {
+          setLoadingExistingTenants(true);
+          const supabase = await createSPASassClient();
+
+          // Get all tenants
+          const { data, error } = await supabase
+            .from("tenants")
+            .select("*")
+            .order("created_at", { ascending: false });
+
+          if (error) {
+            console.error("Error fetching tenants:", error);
+            return;
+          }
+
+          if (data && data.length > 0) {
+            setExistingTenants(data);
+          }
+        } catch (err) {
+          console.error("Error fetching existing tenants:", err);
+        } finally {
+          setLoadingExistingTenants(false);
+        }
+      }
+    }
+
+    fetchExistingTenants();
+  }, [showAddTenantDialog]);
 
   // Handle input change for edit lease form
   const handleEditLeaseInputChange = (
@@ -340,14 +394,29 @@ export default function PropertyLease({
     }));
   };
 
-  // Handle adding a new tenant
+  // Handle selection of existing tenant
+  const handleExistingTenantSelect = (tenantId: string) => {
+    setSelectedExistingTenantId(tenantId);
+    const selectedTenant = existingTenants.find((t) => t.id === tenantId);
+    if (selectedTenant) {
+      setNewTenant((prev) => ({
+        ...prev,
+        first_name: selectedTenant.first_name,
+        last_name: selectedTenant.last_name,
+        email: selectedTenant.email || "",
+        phone: selectedTenant.phone || "",
+      }));
+    }
+  };
+
+  // Modified tenant submission to handle existing tenant selection
   const handleAddTenantSubmit = async () => {
     try {
       setSubmittingTenant(true);
 
-      // Validation
-      if (!newTenant.first_name || !newTenant.last_name || !newTenant.email) {
-        toast.error("First name, last name, and email are required");
+      // Validation for lease details
+      if (!newTenant.move_in_date || !newTenant.lease_end) {
+        toast.error("Lease start and end dates are required");
         return;
       }
 
@@ -356,40 +425,49 @@ export default function PropertyLease({
         return;
       }
 
-      if (!newTenant.security_deposit || newTenant.security_deposit < 0) {
-        toast.error("Please enter a valid security deposit");
-        return;
-      }
-
       const supabase = await createSPASassClient();
+      let tenantId: string;
 
-      // First create a new tenant
-      const { data: tenantData, error: tenantError } = await supabase
-        .from("tenants")
-        .insert({
-          first_name: newTenant.first_name,
-          last_name: newTenant.last_name,
-          email: newTenant.email,
-          phone: newTenant.phone,
-          notes: newTenant.notes,
-        })
-        .select()
-        .single();
+      if (useExistingTenant && selectedExistingTenantId) {
+        // Use existing tenant
+        tenantId = selectedExistingTenantId;
+      } else {
+        // Validation for new tenant
+        if (!newTenant.first_name || !newTenant.last_name || !newTenant.email) {
+          toast.error("First name, last name, and email are required");
+          return;
+        }
 
-      if (tenantError) {
-        throw new Error(`Error creating tenant: ${tenantError.message}`);
+        // Create a new tenant
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .insert({
+            first_name: newTenant.first_name,
+            last_name: newTenant.last_name,
+            email: newTenant.email,
+            phone: newTenant.phone,
+            notes: newTenant.notes,
+          })
+          .select()
+          .single();
+
+        if (tenantError) {
+          throw new Error(`Error creating tenant: ${tenantError.message}`);
+        }
+
+        if (!tenantData) {
+          throw new Error("Failed to create tenant record");
+        }
+
+        tenantId = tenantData.id;
       }
 
-      if (!tenantData) {
-        throw new Error("Failed to create tenant record");
-      }
-
-      // Then create a new lease connecting the tenant to the property
+      // Create the lease
       const { data: leaseData, error: leaseError } = await supabase
         .from("leases")
         .insert({
           property_id: propertyId,
-          tenant_id: tenantData.id,
+          tenant_id: tenantId,
           lease_start: newTenant.move_in_date,
           lease_end: newTenant.lease_end,
           rent_amount: newTenant.rent_amount,
@@ -408,7 +486,10 @@ export default function PropertyLease({
 
       // Success - update state with new tenant and lease
       toast.success("New lease created successfully");
-      setTenant(tenantData);
+
+      // Fetch the tenant data to update the UI
+      const selectedTenant = await fetchTenantById(tenantId);
+      setTenant(selectedTenant);
       setLease(leaseData);
       setShowAddTenantDialog(false);
 
@@ -429,6 +510,8 @@ export default function PropertyLease({
           .slice(0, 10),
         notes: "",
       });
+      setUseExistingTenant(false);
+      setSelectedExistingTenantId(null);
     } catch (error) {
       console.error("Error creating lease:", error);
       toast.error("Failed to create lease. Please try again.");
@@ -811,61 +894,108 @@ export default function PropertyLease({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="grid grid-cols-1 gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label
-                    htmlFor="tenant-first_name"
-                    className="text-sm font-medium"
-                  >
-                    First Name
-                  </label>
-                  <Input
-                    id="tenant-first_name"
-                    placeholder="First name"
-                    value={newTenant.first_name}
-                    onChange={handleInputChange}
+              <div className="space-y-2">
+                <label htmlFor="use-existing-tenant" className="text-sm">
+                  <input
+                    type="checkbox"
+                    id="use-existing-tenant"
+                    checked={useExistingTenant}
+                    onChange={(e) => setUseExistingTenant(e.target.checked)}
+                    className="mr-2"
                   />
-                </div>
-                <div className="space-y-2">
-                  <label
-                    htmlFor="tenant-last_name"
-                    className="text-sm font-medium"
-                  >
-                    Last Name
-                  </label>
-                  <Input
-                    id="tenant-last_name"
-                    placeholder="Last name"
-                    value={newTenant.last_name}
-                    onChange={handleInputChange}
-                  />
-                </div>
+                  Use Existing Tenant
+                </label>
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="tenant-email" className="text-sm font-medium">
-                  Email Address
-                </label>
-                <Input
-                  id="tenant-email"
-                  type="email"
-                  placeholder="Email address"
-                  value={newTenant.email}
-                  onChange={handleInputChange}
-                />
-              </div>
+              {useExistingTenant && (
+                <div className="space-y-2">
+                  <label
+                    htmlFor="existing-tenant"
+                    className="text-sm font-medium"
+                  >
+                    Select Tenant
+                  </label>
+                  <select
+                    id="existing-tenant"
+                    className="w-full p-2 border rounded-md"
+                    value={selectedExistingTenantId || ""}
+                    onChange={(e) => handleExistingTenantSelect(e.target.value)}
+                  >
+                    <option value="">Select a tenant</option>
+                    {existingTenants.map((tenant) => (
+                      <option key={tenant.id} value={tenant.id}>
+                        {tenant.first_name} {tenant.last_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div className="space-y-2">
-                <label htmlFor="tenant-phone" className="text-sm font-medium">
-                  Phone Number
-                </label>
-                <Input
-                  id="tenant-phone"
-                  placeholder="Phone number"
-                  value={newTenant.phone}
-                  onChange={handleInputChange}
-                />
-              </div>
+              {!useExistingTenant && (
+                <>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="tenant-first_name"
+                        className="text-sm font-medium"
+                      >
+                        First Name
+                      </label>
+                      <Input
+                        id="tenant-first_name"
+                        placeholder="First name"
+                        value={newTenant.first_name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="tenant-last_name"
+                        className="text-sm font-medium"
+                      >
+                        Last Name
+                      </label>
+                      <Input
+                        id="tenant-last_name"
+                        placeholder="Last name"
+                        value={newTenant.last_name}
+                        onChange={handleInputChange}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="tenant-email"
+                      className="text-sm font-medium"
+                    >
+                      Email Address
+                    </label>
+                    <Input
+                      id="tenant-email"
+                      type="email"
+                      placeholder="Email address"
+                      value={newTenant.email}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label
+                      htmlFor="tenant-phone"
+                      className="text-sm font-medium"
+                    >
+                      Phone Number
+                    </label>
+                    <Input
+                      id="tenant-phone"
+                      placeholder="Phone number"
+                      value={newTenant.phone}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
@@ -927,6 +1057,9 @@ export default function PropertyLease({
                     Monthly Rent
                   </label>
                   <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {getCurrencySymbol(newTenant.currency)}
+                    </div>
                     <Input
                       id="tenant-rent_amount"
                       type="number"
@@ -945,6 +1078,9 @@ export default function PropertyLease({
                     Security Deposit
                   </label>
                   <div className="relative">
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                      {getCurrencySymbol(newTenant.currency)}
+                    </div>
                     <Input
                       id="tenant-security_deposit"
                       type="number"
@@ -1048,6 +1184,9 @@ export default function PropertyLease({
                   Monthly Rent
                 </label>
                 <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    {getCurrencySymbol(editLeaseForm.currency)}
+                  </div>
                   <Input
                     id="lease-rent_amount"
                     type="number"
@@ -1066,6 +1205,9 @@ export default function PropertyLease({
                   Security Deposit
                 </label>
                 <div className="relative">
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
+                    {getCurrencySymbol(editLeaseForm.currency)}
+                  </div>
                   <Input
                     id="lease-security_deposit"
                     type="number"
