@@ -96,7 +96,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             )}
           </div>
         </div>
-
         {/* Main content */}
         <main className="p-4">{children}</main>
       </div>

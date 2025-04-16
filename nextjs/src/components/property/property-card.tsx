@@ -42,7 +42,7 @@ export default function PropertyCard({
 
   return (
     <Card
-      className="cursor-pointer hover:shadow-lg transition-shadow flex flex-col h-[360px]"
+      className="cursor-pointer transition-all duration-200 ease-in-out hover:shadow-lg hover:-translate-y-1 hover:border-[var(--color-success)] hover:bg-[var(--color-primary-100)] flex flex-col h-[360px]"
       onClick={handleClick}
     >
       {/* Image */}

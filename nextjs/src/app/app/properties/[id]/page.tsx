@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Database } from "@/lib/types";
 import {
   ArrowLeft,
-  Building2,
   Users,
   FileText,
   Wallet,
@@ -58,6 +57,7 @@ export default function PropertyDetailsPage() {
   const [property, setProperty] = useState<PropertyWithDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [propertyImage, setPropertyImage] = useState<string | null>(null);
 
   // Fetch property data with related details
   useEffect(() => {
@@ -72,6 +72,10 @@ export default function PropertyDetailsPage() {
           setError("Property not found");
           return;
         }
+
+        // Set a placeholder image
+        const imageIndex = Math.floor(Math.random() * 4) + 1;
+        setPropertyImage(`/stock_photos/apartment_${imageIndex}.jpg`);
 
         // Fetch related data
         const supabase = await createSPASassClient();
@@ -249,6 +253,13 @@ export default function PropertyDetailsPage() {
           </div>
         ) : (
           <>
+            {propertyImage && (
+              <img
+                src={propertyImage}
+                alt="Property"
+                className="w-full h-64 object-cover rounded-lg mb-4"
+              />
+            )}
             <h1 className="text-3xl font-bold">{property?.title}</h1>
             <p className="text-lg text-gray-600 flex items-center mt-1">
               <MapPin className="h-4 w-4 text-gray-500 mr-1" />

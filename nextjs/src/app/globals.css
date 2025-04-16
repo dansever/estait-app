@@ -5,14 +5,14 @@
 :root {
   /* Primary */
   --color-primary: #3269b5;
-  --color-primary-100: #e8eefd;
-  --color-primary-200: #c4d3f9;
-  --color-primary-300: #9fb8f5;
-  --color-primary-400: #7b9df1;
-  --color-primary-500: #5782ed;
-  --color-primary-600: #3056d3;
-  --color-primary-700: #2645a7;
-  --color-primary-800: #1b337b;
+  --color-primary-100: #f1f5ff;
+  --color-primary-200: #dae3f9;
+  --color-primary-300: #bcccf5;
+  --color-primary-400: #95b0f4;
+  --color-primary-500: #7094ef;
+  --color-primary-600: #486bde;
+  --color-primary-700: #3756ba;
+  --color-primary-800: #263e88;
   --color-primary-900: #11224f;
   --color-primary-foreground: #ffffff;
 
