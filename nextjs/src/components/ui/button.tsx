@@ -23,7 +23,6 @@ const buttonVariants = cva(
           "text-[var(--color-text)] hover:bg-[var(--color-accent)] hover:text-[var(--color-heading)]",
         link: "text-[var(--color-primary)] underline underline-offset-4 hover:text-[var(--color-primary-700)]",
       },
-
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",

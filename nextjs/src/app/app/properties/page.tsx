@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";
 import { PropertyWithDetails } from "@/hooks/use-property-details";
-import FileManager from "@/components/FileManager";
 
 // Stock photos for placeholders
 const STOCK_PHOTOS = [
@@ -267,9 +266,6 @@ export default function PropertiesPage() {
           </Card>
         )}
       </div>
-
-      {/* File Management Section - Now using the reusable component */}
-      {user?.id && <FileManager userId={user.id} />}
     </div>
   );
 }

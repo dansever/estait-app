@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { useGlobal } from "@/lib/context/GlobalContext";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -34,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import FileManager from "@/components/FileManager";
 import { Input } from "@/components/ui/input";
 
 interface PropertyDocumentsProps {
@@ -68,6 +70,7 @@ export default function PropertyDocuments({
     null
   );
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
+  const { user } = useGlobal();
 
   // Fetch all documents related to this property
   useEffect(() => {
@@ -228,7 +231,6 @@ export default function PropertyDocuments({
           <Upload className="h-4 w-4 mr-2" /> Upload Document
         </Button>
       </div>
-
       {/* Search and filter */}
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
@@ -266,7 +268,6 @@ export default function PropertyDocuments({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
       {/* Documents list */}
       {loadingDocuments ? (
         <div className="space-y-3">
@@ -350,7 +351,6 @@ export default function PropertyDocuments({
           </CardContent>
         </Card>
       )}
-
       {/* Upload Document Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
         <DialogContent>
@@ -398,7 +398,6 @@ export default function PropertyDocuments({
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Share Dialog */}
       <Dialog
         open={!!shareUrl}
@@ -430,6 +429,8 @@ export default function PropertyDocuments({
           </div>
         </DialogContent>
       </Dialog>
+      {/* File Management Section - Now using the reusable component */}
+      {user?.id && <FileManager userId={user.id} />}
     </div>
   );
 }
