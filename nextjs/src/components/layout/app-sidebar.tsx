@@ -21,7 +21,7 @@ export function AppSidebar({
   toggleSidebar: () => void;
 }) {
   const pathname = usePathname();
-  const { user } = useGlobal();
+  useGlobal();
   const productName = process.env.NEXT_PUBLIC_PRODUCTNAME;
 
   const navigation = [

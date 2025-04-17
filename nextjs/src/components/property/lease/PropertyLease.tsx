@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Dispatch, SetStateAction } from "react";
+import { useState, useEffect } from "react";
 import { Lease, Tenant, fetchTenantById } from "./lease-utils";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,17 +14,12 @@ import AddLeaseDialog from "./AddLeaseDialog";
 
 interface PropertyLeaseProps {
   propertyId: string;
-  lease?: any; // Accept the lease passed from the parent component
+  lease?: Lease | null; // Accept the lease passed from the parent component
   isLoading: boolean;
   onDataChanged?: () => Promise<void>;
 }
 
-interface AddLeaseDialogProps {
-  open: boolean;
-  onOpenChange: Dispatch<SetStateAction<boolean>>;
-  propertyId: string;
-  onLeaseCreated: () => Promise<void>;
-}
+// This interface is defined in AddLeaseDialog.tsx
 
 export default function PropertyLease({
   propertyId,
@@ -58,7 +53,10 @@ export default function PropertyLease({
           console.error("Error fetching lease:", error);
           // No data found or other error
         } else if (data) {
-          setLease(data);
+          setLease({
+            ...data,
+            payment_due_day: data.payment_due_day ?? undefined,
+          });
 
           // If we have a tenant ID, fetch the tenant data
           if (data.tenant_id) {
@@ -95,16 +93,13 @@ export default function PropertyLease({
       setLease(formattedLease);
 
       // If we have tenant data from the initial lease, use it directly
-      if (initialLease.tenant) {
-        setTenant(initialLease.tenant);
-        setLoadingTenant(false);
-      }
-      // If we only have a tenant ID, fetch the full tenant data
-      else if (initialLease.tenant_id) {
-        fetchTenantById(initialLease.tenant_id).then((data) => {
-          setTenant(data);
-          setLoadingTenant(false);
-        });
+      if (initialLease.tenant_id) {
+        (async () => {
+          if (initialLease.tenant_id) {
+            const tenantData = await fetchTenantById(initialLease.tenant_id);
+            setTenant(tenantData);
+          }
+        })();
       } else {
         setLoadingTenant(false);
       }
@@ -212,11 +207,7 @@ export default function PropertyLease({
         open={showAddLeaseDialog}
         onOpenChange={setShowAddLeaseDialog}
         propertyId={propertyId}
-        onLeaseCreated={async () => {
-          if (lease && tenant) {
-            await handleLeaseCreated(lease, tenant);
-          }
-        }}
+        onLeaseCreated={handleLeaseCreated}
       />
     </div>
   );

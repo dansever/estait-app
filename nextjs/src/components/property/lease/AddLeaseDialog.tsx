@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { createSPASassClient } from "@/lib/supabase/client";
 import { createLease } from "@/lib/supabase/queries/leases";
 import { getAllTenants } from "@/lib/supabase/queries/tenants";
 import { Database } from "@/lib/types";
@@ -12,7 +11,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,23 +21,26 @@ import {
   Calendar,
   DollarSign,
   Loader2,
-  Plus,
   Users,
 } from "lucide-react";
+import { Lease, Tenant, fetchTenantById } from "./lease-utils";
 
+// Type for lease creation from database schema
 type NewLease = Database["public"]["Tables"]["leases"]["Insert"];
-type Tenant = Database["public"]["Tables"]["tenants"]["Row"];
 
 interface AddLeaseDialogProps {
   propertyId: string;
-  onLeaseCreated: () => Promise<void>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onLeaseCreated: (newLease: Lease, newTenant: Tenant) => Promise<void>;
 }
 
 export default function AddLeaseDialog({
   propertyId,
+  open,
+  onOpenChange,
   onLeaseCreated,
 }: AddLeaseDialogProps) {
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -66,9 +67,9 @@ export default function AddLeaseDialog({
     }
   };
 
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (newOpen) {
+  // Reset form when dialog opens/closes
+  React.useEffect(() => {
+    if (open) {
       loadTenants();
       // Reset form
       setTenantId("");
@@ -82,7 +83,7 @@ export default function AddLeaseDialog({
       setNotes("");
       setError("");
     }
-  };
+  }, [open]);
 
   const handleAddLease = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -110,12 +111,35 @@ export default function AddLeaseDialog({
         notes: notes || null,
       };
 
-      await createLease(newLease);
+      const { data: createdLease } = await createLease(newLease);
 
-      setOpen(false);
-      if (onLeaseCreated) {
-        await onLeaseCreated();
+      if (!createdLease) {
+        throw new Error("Failed to create lease - no data returned");
       }
+
+      // Fetch the tenant data to pass back to parent
+      const tenantData = await fetchTenantById(tenantId);
+
+      if (!tenantData) {
+        throw new Error("Failed to retrieve tenant data");
+      }
+
+      // Format lease object to match the Lease interface
+      const formattedLease: Lease = {
+        id: createdLease.id,
+        lease_start: createdLease.lease_start,
+        lease_end: createdLease.lease_end,
+        rent_amount: createdLease.rent_amount,
+        security_deposit: createdLease.security_deposit || 0,
+        payment_due_day: createdLease.payment_due_day || 1,
+        status: createdLease.status,
+        payment_frequency: createdLease.payment_frequency,
+        tenant_id: createdLease.tenant_id,
+        currency: createdLease.currency || "USD",
+      };
+
+      onOpenChange(false);
+      await onLeaseCreated(formattedLease, tenantData);
     } catch (err) {
       console.error("Error adding lease:", err);
       setError("Failed to add lease");
@@ -125,13 +149,7 @@ export default function AddLeaseDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Lease
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>Add New Lease</DialogTitle>
@@ -172,6 +190,8 @@ export default function AddLeaseDialog({
             </select>
           </div>
 
+          {/* Rest of the form remains the same */}
+          {/* ... existing form fields ... */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label
@@ -318,7 +338,7 @@ export default function AddLeaseDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={loading}
             >
               Cancel

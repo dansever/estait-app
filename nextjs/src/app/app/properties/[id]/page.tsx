@@ -28,10 +28,7 @@ import PropertyFinancials from "./sections/financials";
 import PropertyMaintenance from "./sections/maintenance";
 
 // Import utilities for currency formatting
-import {
-  getCurrencySymbol,
-  formatCurrency,
-} from "@/components/property/lease/lease-utils";
+import { formatCurrency } from "@/components/property/lease/lease-utils";
 
 type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
   address?: {

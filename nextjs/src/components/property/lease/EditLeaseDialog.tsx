@@ -17,6 +17,7 @@ import {
   getCurrencySymbol,
   initializeEditLeaseForm,
 } from "./lease-utils";
+import { Loader2 } from "lucide-react";
 
 interface EditLeaseDialogProps {
   open: boolean;
@@ -55,9 +56,9 @@ export default function EditLeaseDialog({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { id, value } = e.target;
-    const fieldName = id.replace("lease-", "");
 
-    console.log(`Field changed: ${fieldName}, value: ${value}`); // Debug logging
+    // Extract the field name from the id by removing "lease-" prefix
+    const fieldName = id.replace("lease-", "");
 
     // Handle numeric fields
     if (fieldName === "rent_amount" || fieldName === "security_deposit") {
@@ -67,11 +68,15 @@ export default function EditLeaseDialog({
       }));
     }
     // Handle date fields explicitly
-    else if (fieldName === "start" || fieldName === "end") {
-      const stateField = fieldName === "start" ? "lease_start" : "lease_end";
+    else if (fieldName === "start") {
       setFormState((prev) => ({
         ...prev,
-        [stateField]: value,
+        lease_start: value,
+      }));
+    } else if (fieldName === "end") {
+      setFormState((prev) => ({
+        ...prev,
+        lease_end: value,
       }));
     }
     // Handle payment_due_day (needs to be a number)
@@ -85,10 +90,29 @@ export default function EditLeaseDialog({
     else if (fieldName === "frequency") {
       setFormState((prev) => ({
         ...prev,
-        payment_frequency: value,
+        payment_frequency: value as
+          | "monthly"
+          | "weekly"
+          | "biweekly"
+          | "quarterly"
+          | "annually",
       }));
     }
-    // Handle all other fields
+    // Handle currency field explicitly
+    else if (fieldName === "currency") {
+      setFormState((prev) => ({
+        ...prev,
+        currency: value,
+      }));
+    }
+    // Handle status field explicitly
+    else if (fieldName === "status") {
+      setFormState((prev) => ({
+        ...prev,
+        status: value,
+      }));
+    }
+    // Handle any other fields
     else {
       setFormState((prev) => ({
         ...prev,
@@ -146,12 +170,27 @@ export default function EditLeaseDialog({
         throw new Error(`Error updating lease: ${error.message}`);
       }
 
+      if (!updatedLease) {
+        throw new Error("Failed to update lease - no data returned");
+      }
+
+      // Format the returned lease to match the expected interface
+      const formattedLease: Lease = {
+        id: updatedLease.id,
+        lease_start: updatedLease.lease_start,
+        lease_end: updatedLease.lease_end,
+        rent_amount: updatedLease.rent_amount,
+        security_deposit: updatedLease.security_deposit || 0,
+        payment_due_day: updatedLease.payment_due_day || 1,
+        status: updatedLease.status,
+        payment_frequency: updatedLease.payment_frequency,
+        tenant_id: updatedLease.tenant_id,
+        currency: updatedLease.currency || "USD",
+      };
+
       // Success - notify parent component
       toast.success("Lease updated successfully");
-      onLeaseUpdated({
-        ...updatedLease,
-        currency: updatedLease.currency ?? undefined,
-      });
+      onLeaseUpdated(formattedLease);
       onOpenChange(false);
     } catch (error) {
       console.error("Error updating lease:", error);
@@ -214,6 +253,8 @@ export default function EditLeaseDialog({
               <option value="EUR">EUR (€)</option>
               <option value="GBP">GBP (£)</option>
               <option value="NIS">NIS (₪)</option>
+              <option value="CAD">CAD (C$)</option>
+              <option value="AUD">AUD (A$)</option>
             </select>
           </div>
 
@@ -325,6 +366,7 @@ export default function EditLeaseDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {submitting
               ? "Updating..."
               : (lease ? "Update" : "Create") + " Lease"}
