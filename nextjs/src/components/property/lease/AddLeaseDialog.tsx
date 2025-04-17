@@ -23,10 +23,20 @@ import {
   Loader2,
   Users,
 } from "lucide-react";
-import { Lease, Tenant, fetchTenantById } from "./lease-utils";
+import { Lease, fetchTenantById } from "./lease-utils";
 
 // Type for lease creation from database schema
 type NewLease = Database["public"]["Tables"]["leases"]["Insert"];
+
+export interface Tenant {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  phone: string | null;
+  notes: string | null;
+  created_at: string | null;
+}
 
 interface AddLeaseDialogProps {
   propertyId: string;
@@ -51,7 +61,9 @@ export default function AddLeaseDialog({
   const [leaseEnd, setLeaseEnd] = useState<string>("");
   const [rentAmount, setRentAmount] = useState<string>("");
   const [securityDeposit, setSecurityDeposit] = useState<string>("");
-  const [paymentFrequency, setPaymentFrequency] = useState<string>("monthly");
+  const [paymentFrequency, setPaymentFrequency] = useState<
+    "monthly" | "weekly" | "biweekly" | "quarterly" | "annually"
+  >("monthly");
   const [paymentDueDay, setPaymentDueDay] = useState<string>("1");
   const [currency, setCurrency] = useState<string>("USD");
   const [notes, setNotes] = useState<string>("");
@@ -103,7 +115,9 @@ export default function AddLeaseDialog({
         lease_start: leaseStart,
         lease_end: leaseEnd,
         rent_amount: parseFloat(rentAmount),
-        security_deposit: securityDeposit ? parseFloat(securityDeposit) : null,
+        security_deposit: securityDeposit
+          ? parseFloat(securityDeposit)
+          : undefined,
         payment_frequency: paymentFrequency,
         payment_due_day: parseInt(paymentDueDay),
         currency: currency,
@@ -111,7 +125,7 @@ export default function AddLeaseDialog({
         notes: notes || null,
       };
 
-      const { data: createdLease } = await createLease(newLease);
+      const createdLease = await createLease(newLease);
 
       if (!createdLease) {
         throw new Error("Failed to create lease - no data returned");
@@ -138,8 +152,15 @@ export default function AddLeaseDialog({
         currency: createdLease.currency || "USD",
       };
 
+      // Convert tenant data to match Tenant interface in this file
+      const formattedTenant: Tenant = {
+        ...tenantData,
+        notes: tenantData.notes || null, // Convert undefined to null
+        created_at: tenantData.created_at || null, // Convert undefined to null
+      };
+
       onOpenChange(false);
-      await onLeaseCreated(formattedLease, tenantData);
+      await onLeaseCreated(formattedLease, formattedTenant);
     } catch (err) {
       console.error("Error adding lease:", err);
       setError("Failed to add lease");
@@ -278,7 +299,16 @@ export default function AddLeaseDialog({
               <select
                 id="payment-frequency"
                 value={paymentFrequency}
-                onChange={(e) => setPaymentFrequency(e.target.value)}
+                onChange={(e) =>
+                  setPaymentFrequency(
+                    e.target.value as
+                      | "monthly"
+                      | "weekly"
+                      | "biweekly"
+                      | "quarterly"
+                      | "annually"
+                  )
+                }
                 className="w-full p-2 border rounded-md"
               >
                 <option value="monthly">Monthly</option>
