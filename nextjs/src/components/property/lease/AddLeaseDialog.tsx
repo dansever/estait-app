@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { createLease } from "@/lib/supabase/queries/leases";
 import { getAllTenants } from "@/lib/supabase/queries/tenants";
 import { Database } from "@/lib/types";
+import { Tenant } from "./lease-utils";
 import {
   Dialog,
   DialogContent,
@@ -28,15 +29,15 @@ import { Lease, fetchTenantById } from "./lease-utils";
 // Type for lease creation from database schema
 type NewLease = Database["public"]["Tables"]["leases"]["Insert"];
 
-export interface Tenant {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  phone: string | null;
-  notes: string | null;
-  created_at: string | null;
-}
+// export interface Tenant {
+//   id: string;
+//   first_name: string;
+//   last_name: string;
+//   email: string | null;
+//   phone: string | null;
+//   notes: string | null;
+//   created_at: string | null;
+// }
 
 interface AddLeaseDialogProps {
   propertyId: string;
@@ -72,7 +73,17 @@ export default function AddLeaseDialog({
   const loadTenants = async () => {
     try {
       const tenantsData = await getAllTenants();
-      setTenants(tenantsData || []);
+      // Transform the tenant data to match the Tenant interface
+      const formattedTenants = (tenantsData || []).map((tenant) => ({
+        id: tenant.id,
+        first_name: tenant.first_name,
+        last_name: tenant.last_name,
+        email: tenant.email || "", // Convert null to empty string
+        phone: tenant.phone || "", // Convert null to empty string
+        notes: tenant.notes || undefined, // Convert null to undefined
+        created_at: tenant.created_at || undefined, // Convert null to undefined
+      }));
+      setTenants(formattedTenants);
     } catch (err) {
       console.error("Error loading tenants:", err);
       setError("Failed to load tenants");
@@ -155,8 +166,8 @@ export default function AddLeaseDialog({
       // Convert tenant data to match Tenant interface in this file
       const formattedTenant: Tenant = {
         ...tenantData,
-        notes: tenantData.notes || null, // Convert undefined to null
-        created_at: tenantData.created_at || null, // Convert undefined to null
+        notes: tenantData.notes || undefined, // Convert null to undefined
+        created_at: tenantData.created_at || undefined, // Convert null to undefined
       };
 
       onOpenChange(false);
