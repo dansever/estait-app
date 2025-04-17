@@ -137,7 +137,10 @@ export default function PropertyDetailsPage() {
         .single();
 
       if (leaseData) {
-        lease = leaseData;
+        lease = {
+          ...leaseData,
+          payment_due_day: leaseData.payment_due_day ?? null,
+        };
       }
 
       // Combine all data
@@ -161,7 +164,7 @@ export default function PropertyDetailsPage() {
   }, [propertyId]);
 
   // Format full address string
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: PropertyWithDetails["address"]) => {
     if (!address) return "Address not available";
 
     const parts = [];
@@ -185,7 +188,9 @@ export default function PropertyDetailsPage() {
       id: "overview",
       label: "Overview",
       icon: Eye,
-      content: <PropertyOverview property={property} isLoading={isLoading} />,
+      content: (
+        <PropertyOverview propertyId={propertyId} isLoading={isLoading} />
+      ),
     },
     {
       id: "lease",

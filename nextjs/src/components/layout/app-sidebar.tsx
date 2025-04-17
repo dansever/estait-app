@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import {
   Home,
   Building,
-  Search,
   Sparkles,
   BarChart2,
   Settings,

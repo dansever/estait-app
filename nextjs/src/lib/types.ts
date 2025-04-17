@@ -335,39 +335,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      // todo_list: {
-      //   Row: {
-      //     created_at: string;
-      //     description: string | null;
-      //     done: boolean;
-      //     done_at: string | null;
-      //     id: number;
-      //     owner: string;
-      //     title: string;
-      //     urgent: boolean;
-      //   };
-      //   Insert: {
-      //     created_at?: string;
-      //     description?: string | null;
-      //     done?: boolean;
-      //     done_at?: string | null;
-      //     id?: number;
-      //     owner: string;
-      //     title: string;
-      //     urgent?: boolean;
-      //   };
-      //   Update: {
-      //     created_at?: string;
-      //     description?: string | null;
-      //     done?: boolean;
-      //     done_at?: string | null;
-      //     id?: number;
-      //     owner?: string;
-      //     title?: string;
-      //     urgent?: boolean;
-      //   };
-      //   Relationships: [];
-      // };
+
       transaction_categories: {
         Row: {
           id: string;

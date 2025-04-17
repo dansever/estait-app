@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import {
   MapPin,
   Home,
   BedDouble,
   Bath,
-  SquareFoot,
   Calendar,
   Landmark,
   Building,
@@ -24,6 +24,7 @@ import {
   Library,
   Car,
 } from "lucide-react";
+import { TbRulerMeasure } from "react-icons/tb";
 import {
   Dialog,
   DialogContent,
@@ -240,10 +241,12 @@ export default function PropertyOverview({
             <div className="relative w-full h-[300px] overflow-hidden">
               {property.photos && property.photos.length > 0 ? (
                 <>
-                  <img
+                  <Image
                     src={property.photos[activePhotoIndex]}
                     alt={`Property photo ${activePhotoIndex + 1}`}
                     className="w-full h-full object-cover"
+                    layout="fill"
+                    objectFit="cover"
                   />
                   <div className="absolute inset-0 flex items-center justify-between px-4">
                     <Button
@@ -311,7 +314,7 @@ export default function PropertyOverview({
                   </span>
                 </div>
                 <div className="flex items-center">
-                  <SquareFoot className="h-5 w-5 mr-2 text-gray-400" />
+                  <TbRulerMeasure className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="font-medium">
                     {property.square_feet.toLocaleString()} sq ft
                   </span>
