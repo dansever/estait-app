@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { createProperty } from "@/lib/supabase/queries/properties";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { createSPAClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -59,18 +59,19 @@ const propertyFormSchema = z.object({
     "other",
   ]),
   property_status: z.enum(["vacant", "occupied", "maintenance", "listed"]),
-  bedrooms: z.coerce.number().int().min(0).optional(),
-  bathrooms: z.coerce.number().min(0).optional(),
-  size: z.coerce.number().min(0).optional(),
+  bedrooms: z.coerce.number().int().min(0).default(0).optional(),
+  bathrooms: z.coerce.number().min(0).default(0).optional(),
+  size: z.coerce.number().min(0).default(0).optional(),
   year_built: z.coerce
     .number()
     .int()
     .min(1800)
     .max(new Date().getFullYear())
+    .default(new Date().getFullYear())
     .optional(),
   parking_spaces: z.coerce.number().int().min(0).default(0),
   unit_system: z.enum(["imperial", "metric"]).default("imperial"),
-  purchase_price: z.coerce.number().min(0).optional(),
+  purchase_price: z.coerce.number().min(0).default(0).optional(),
   currency: z.string().min(1, "Currency is required"),
 
   // Address information
@@ -110,24 +111,23 @@ export default function AddPropertyPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sectionOneValid, setSectionOneValid] = useState(false);
   const [addressSectionExpanded, setAddressSectionExpanded] = useState(false);
-  const supabase = createClientComponentClient();
+  const supabase = createSPAClient();
 
   // Initialize form with default values
   const form = useForm<PropertyFormValues>({
     resolver: zodResolver(propertyFormSchema),
-    mode: "onChange",
     defaultValues: {
       title: "",
       description: "",
       property_type: "apartment",
       property_status: "vacant",
-      bedrooms: undefined,
-      bathrooms: undefined,
-      size: undefined,
-      year_built: undefined,
+      bedrooms: 0,
+      bathrooms: 0,
+      size: 0,
+      year_built: new Date().getFullYear(),
       parking_spaces: 0,
       unit_system: "imperial",
-      purchase_price: undefined,
+      purchase_price: 0,
       currency: "USD",
       street: "",
       apartment_number: "",

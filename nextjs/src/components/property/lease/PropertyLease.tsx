@@ -63,7 +63,13 @@ export default function PropertyLease({
 
           // Check if we have the tenant data inline in the lease
           if (initialLease.tenant) {
-            setTenant(initialLease.tenant);
+            setTenant({
+              id: initialLease.tenant.id,
+              first_name: initialLease.tenant.first_name || "",
+              last_name: initialLease.tenant.last_name || "",
+              email: initialLease.tenant.email || "",
+              phone: initialLease.tenant.phone || "",
+            });
             setLoadingTenant(false);
           }
           // Otherwise if we have a tenant ID, fetch it
@@ -195,8 +201,8 @@ export default function PropertyLease({
         <div className="text-center p-10 border rounded-lg bg-gray-50">
           <h3 className="text-lg font-medium mb-2">No Active Lease</h3>
           <p className="text-gray-600 mb-4">
-            This property currently doesn't have an active lease. Add a new
-            lease to start managing it.
+            This property currently doesn&rsquo;t have an active lease. Add a
+            new lease to start managing it.
           </p>
         </div>
       )}

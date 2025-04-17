@@ -94,25 +94,6 @@ export default function LeaseDetailsCard({
 
             {lease.status === "active" && (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Last Payment</p>
-                    <p className="font-medium mt-1">
-                      {lease.last_payment_date
-                        ? formatDate(lease.last_payment_date)
-                        : "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Next Payment</p>
-                    <p className="font-medium mt-1">
-                      {lease.next_payment_date
-                        ? formatDate(lease.next_payment_date)
-                        : "N/A"}
-                    </p>
-                  </div>
-                </div>
-
                 <div>
                   <p className="text-sm text-gray-500">Lease Remaining</p>
                   <div className="w-full h-2 bg-gray-200 rounded-full mt-2">

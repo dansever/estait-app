@@ -24,8 +24,6 @@ export interface Lease {
   status: string | null;
   payment_frequency: Database["public"]["Enums"]["payment_frequency"] | null;
   tenant_id: string | null;
-  last_payment_date?: string;
-  next_payment_date?: string;
   currency?: string;
 }
 
