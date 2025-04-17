@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   MapPin,
   Home,
@@ -22,6 +23,7 @@ import {
   PencilRuler,
   Library,
   Car,
+  Trash2,
 } from "lucide-react";
 import { TbRulerMeasure } from "react-icons/tb";
 import {
@@ -32,10 +34,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 // Import the usePropertyDetails hook
 import { usePropertyDetails } from "@/hooks/use-property-details";
+import { toast } from "sonner";
+import { deleteProperty } from "@/lib/supabase/queries/properties";
+import { createSPASassClient } from "@/lib/supabase/client";
 
 interface PropertyOverviewProps {
   propertyId: string;
@@ -55,6 +70,7 @@ export default function PropertyOverview({
     getFormattedAddress,
     getPropertyStatus,
   } = usePropertyDetails(propertyId);
+  const router = useRouter();
 
   // Combined loading state
   const isLoading = parentIsLoading || hookIsLoading;
@@ -63,6 +79,8 @@ export default function PropertyOverview({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
+  const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Stock photos for property visualizations
   const stockPhotos = [
@@ -100,6 +118,112 @@ export default function PropertyOverview({
     setActivePhotoIndex((prev) =>
       prev === 0 ? (stockPhotos.length || 0) - 1 : prev - 1
     );
+  };
+
+  // Handle property removal with cascading deletion of related records
+  const removeProperty = async () => {
+    try {
+      setIsDeleting(true);
+
+      // First, get the Supabase client
+      const supabase = await createSPASassClient();
+
+      // 1. Delete any maintenance tasks related to this property
+      const { error: maintenanceError } = await supabase
+        .from("maintenance_tasks")
+        .delete()
+        .eq("property_id", propertyId);
+
+      if (maintenanceError) {
+        console.error("Error deleting maintenance tasks:", maintenanceError);
+        throw maintenanceError;
+      }
+
+      // 2. Delete any documents related to this property
+      const { error: documentsError } = await supabase
+        .from("documents")
+        .delete()
+        .eq("property_id", propertyId);
+
+      if (documentsError) {
+        console.error("Error deleting documents:", documentsError);
+        throw documentsError;
+      }
+
+      // 3. Get the tenant IDs associated with this property's leases
+      const { data: leases, error: leasesFetchError } = await supabase
+        .from("leases")
+        .select("id, tenant_id")
+        .eq("property_id", propertyId);
+
+      if (leasesFetchError) {
+        console.error("Error fetching leases:", leasesFetchError);
+        throw leasesFetchError;
+      }
+
+      // 4. Delete all leases related to this property
+      const { error: leasesError } = await supabase
+        .from("leases")
+        .delete()
+        .eq("property_id", propertyId);
+
+      if (leasesError) {
+        console.error("Error deleting leases:", leasesError);
+        throw leasesError;
+      }
+
+      // 5. Delete any tenants that were only associated with this property
+      // Get unique tenant IDs from leases
+      const tenantIds =
+        leases?.map((lease) => lease.tenant_id).filter(Boolean) || [];
+
+      // For each tenant, check if they have other leases before deleting
+      for (const tenantId of tenantIds) {
+        if (!tenantId) continue;
+
+        // Check if tenant has other leases
+        const { data: otherLeases, error: otherLeasesError } = await supabase
+          .from("leases")
+          .select("id")
+          .eq("tenant_id", tenantId)
+          .neq("property_id", propertyId)
+          .limit(1);
+
+        if (otherLeasesError) {
+          console.error(
+            "Error checking tenant's other leases:",
+            otherLeasesError
+          );
+          continue;
+        }
+
+        // If tenant has no other leases, delete them
+        if (!otherLeases || otherLeases.length === 0) {
+          const { error: tenantError } = await supabase
+            .from("tenants")
+            .delete()
+            .eq("id", tenantId);
+
+          if (tenantError) {
+            console.error(`Error deleting tenant ${tenantId}:`, tenantError);
+          }
+        }
+      }
+
+      // 6. Finally, delete the property itself
+      await deleteProperty(propertyId);
+
+      // Show success message
+      toast.success("Property and related data successfully deleted");
+
+      // Navigate back to the properties list
+      router.push("/app/properties");
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      toast.error("Failed to delete property. Please try again.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   if (isLoading) {
@@ -164,9 +288,17 @@ export default function PropertyOverview({
           <Home className="h-5 w-5 mr-2" />
           <h2 className="text-xl font-bold">Property Overview</h2>
         </div>
-        <Button variant="outline" onClick={() => setShowEditDialog(true)}>
-          <FileEdit className="h-4 w-4 mr-2" /> Edit Property
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+            <FileEdit className="h-4 w-4 mr-2" /> Edit Property
+          </Button>
+          <Button
+            variant="outlineDestructive"
+            onClick={() => setShowRemoveDialog(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" /> Remove Property
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -643,6 +775,31 @@ export default function PropertyOverview({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Property Dialog */}
+      <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Property</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this property? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                removeProperty();
+                setShowRemoveDialog(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
