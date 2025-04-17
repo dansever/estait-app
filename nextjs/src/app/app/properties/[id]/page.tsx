@@ -177,9 +177,13 @@ export default function PropertyDetailsPage() {
     return parts.join(", ");
   };
 
-  // Determine property status based on current lease
+  // Use property's status field from schema or determine based on lease as fallback
   const getStatus = () => {
-    return property?.current_lease ? "rented" : "vacant";
+    if (property?.property_status) {
+      return property.property_status;
+    }
+    // Fallback to legacy method if property_status is not present
+    return property?.current_lease ? "occupied" : "vacant";
   };
 
   // Define the tabs for the property sections
@@ -288,6 +292,7 @@ export default function PropertyDetailsPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 mt-4">
+                {/* Status Badge */}
                 {getStatus() === "vacant" ? (
                   <Badge
                     variant="outline"
@@ -295,8 +300,14 @@ export default function PropertyDetailsPage() {
                   >
                     Vacant
                   </Badge>
+                ) : getStatus() === "occupied" ? (
+                  <Badge className="bg-green-600">Occupied</Badge>
+                ) : getStatus() === "maintenance" ? (
+                  <Badge className="bg-orange-600">Maintenance</Badge>
+                ) : getStatus() === "listed" ? (
+                  <Badge className="bg-blue-600">Listed</Badge>
                 ) : (
-                  <Badge className="bg-green-600">Rented</Badge>
+                  <Badge>Unknown</Badge>
                 )}
 
                 {property?.current_lease && (
@@ -317,7 +328,7 @@ export default function PropertyDetailsPage() {
                         property.current_lease.rent_amount,
                         property.current_lease.currency
                       )}
-                      /{property.current_lease.payment_frequency || "month"}
+                      /{property.current_lease.payment_frequency || "monthly"}
                     </span>
                   </div>
                 )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,6 @@ import {
   Plus,
   Calendar,
   CheckCircle2,
-  AlertCircle,
   Clock,
   CheckCheck,
   LayoutList,
@@ -38,7 +37,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -51,8 +50,8 @@ interface MaintenanceTask {
   id: string;
   title: string;
   description: string;
-  status: "pending" | "in_progress" | "completed" | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
+  task_status: "open" | "completed";
+  priority: "low" | "medium" | "high";
   created_at: string;
   due_date: string | null;
   assigned_to: {
@@ -106,7 +105,7 @@ export default function PropertyMaintenance({
             title: "Fix leaking kitchen faucet",
             description:
               "The kitchen sink faucet has been leaking steadily. Needs to be fixed asap before it causes water damage.",
-            status: "pending",
+            task_status: "open",
             priority: "high",
             created_at: new Date().toISOString(),
             due_date: new Date(
@@ -123,7 +122,7 @@ export default function PropertyMaintenance({
             title: "Replace living room light fixtures",
             description:
               "The living room ceiling light is flickering and needs to be replaced.",
-            status: "in_progress",
+            task_status: "open",
             priority: "medium",
             created_at: new Date(
               Date.now() - 3 * 24 * 60 * 60 * 1000
@@ -138,7 +137,7 @@ export default function PropertyMaintenance({
             title: "Annual HVAC maintenance",
             description:
               "Schedule the annual maintenance for the HVAC system before winter.",
-            status: "completed",
+            task_status: "completed",
             priority: "medium",
             created_at: new Date(
               Date.now() - 15 * 24 * 60 * 60 * 1000
@@ -157,7 +156,7 @@ export default function PropertyMaintenance({
             title: "Repaint bathroom ceiling",
             description:
               "The bathroom ceiling has some mold spots that need to be treated and repainted.",
-            status: "pending",
+            task_status: "open",
             priority: "low",
             created_at: new Date(
               Date.now() - 7 * 24 * 60 * 60 * 1000
@@ -172,7 +171,7 @@ export default function PropertyMaintenance({
             title: "Fix broken window blinds",
             description:
               "The blinds in the master bedroom are broken and need to be replaced.",
-            status: "cancelled",
+            task_status: "open",
             priority: "low",
             created_at: new Date(
               Date.now() - 30 * 24 * 60 * 60 * 1000
@@ -198,9 +197,8 @@ export default function PropertyMaintenance({
   // Filter tasks based on active tab
   const filteredTasks = tasks.filter((task) => {
     if (activeTab === "all") return true;
-    if (activeTab === "pending") return task.status === "pending";
-    if (activeTab === "in_progress") return task.status === "in_progress";
-    if (activeTab === "completed") return task.status === "completed";
+    if (activeTab === "open") return task.task_status === "open";
+    if (activeTab === "completed") return task.task_status === "completed";
     return true;
   });
 
@@ -231,21 +229,15 @@ export default function PropertyMaintenance({
   };
 
   // Get status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
+  const getStatusBadge = (task_status: string) => {
+    switch (task_status) {
+      case "open":
         return (
           <Badge
             variant="outline"
             className="border-yellow-500 text-yellow-600"
           >
-            <Clock className="h-3 w-3 mr-1" /> Pending
-          </Badge>
-        );
-      case "in_progress":
-        return (
-          <Badge variant="outline" className="border-blue-500 text-blue-600">
-            In Progress
+            <Clock className="h-3 w-3 mr-1" /> Open
           </Badge>
         );
       case "completed":
@@ -254,8 +246,6 @@ export default function PropertyMaintenance({
             <CheckCheck className="h-3 w-3 mr-1" /> Completed
           </Badge>
         );
-      case "cancelled":
-        return <Badge variant="destructive">Cancelled</Badge>;
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
@@ -264,12 +254,6 @@ export default function PropertyMaintenance({
   // Get priority badge
   const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case "urgent":
-        return (
-          <Badge variant="destructive">
-            <AlertCircle className="h-3 w-3 mr-1" /> Urgent
-          </Badge>
-        );
       case "high":
         return <Badge className="bg-orange-600">High</Badge>;
       case "medium":
@@ -338,11 +322,8 @@ export default function PropertyMaintenance({
             <TabsTrigger value="all" className="flex items-center">
               <LayoutList className="h-4 w-4 mr-2" /> All Tasks
             </TabsTrigger>
-            <TabsTrigger value="pending" className="flex items-center">
-              <Clock className="h-4 w-4 mr-2" /> Pending
-            </TabsTrigger>
-            <TabsTrigger value="in_progress" className="flex items-center">
-              <Clock3 className="h-4 w-4 mr-2" /> In Progress
+            <TabsTrigger value="open" className="flex items-center">
+              <Clock className="h-4 w-4 mr-2" /> Open
             </TabsTrigger>
             <TabsTrigger value="completed" className="flex items-center">
               <CheckCircle2 className="h-4 w-4 mr-2" /> Completed
@@ -366,19 +347,15 @@ export default function PropertyMaintenance({
                 key={task.id}
                 className={`hover:shadow-md transition-shadow border-l-4 
                   ${
-                    task.status === "completed"
+                    task.task_status === "completed"
                       ? "border-l-green-500"
-                      : task.status === "in_progress"
+                      : task.task_status === "open"
                       ? "border-l-blue-500"
-                      : task.status === "cancelled"
-                      ? "border-l-red-500"
-                      : task.priority === "urgent"
-                      ? "border-l-red-500"
                       : task.priority === "high"
-                      ? "border-l-orange-500"
+                      ? "border-l-red-500"
                       : task.priority === "medium"
-                      ? "border-l-blue-500"
-                      : "border-l-green-500"
+                      ? "border-l-orange-500"
+                      : "border-l-green-300"
                   }`}
                 onClick={() => handleViewTask(task)}
               >
@@ -392,7 +369,7 @@ export default function PropertyMaintenance({
                         {task.description}
                       </p>
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {getStatusBadge(task.status)}
+                        {getStatusBadge(task.task_status)}
                         {getPriorityBadge(task.priority)}
                       </div>
                     </div>
@@ -536,7 +513,6 @@ export default function PropertyMaintenance({
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
                 </select>
               </div>
 
@@ -582,7 +558,7 @@ export default function PropertyMaintenance({
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <span>{selectedTask.title}</span>
-                {getStatusBadge(selectedTask.status)}
+                {getStatusBadge(selectedTask.task_status)}
               </DialogTitle>
               <DialogDescription>
                 Task created on {formatDate(selectedTask.created_at)}

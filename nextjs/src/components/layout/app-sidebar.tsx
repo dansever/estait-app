@@ -10,6 +10,7 @@ import {
   X,
   Component,
 } from "lucide-react";
+import { MdSell } from "react-icons/md";
 import { useGlobal } from "@/lib/context/GlobalContext";
 
 export function AppSidebar({
@@ -29,6 +30,7 @@ export function AppSidebar({
     { name: "AI Search", href: "/app/ai-search", icon: Sparkles },
     { name: "Analytics", href: "/app/analytics", icon: BarChart2 },
     { name: "Settings", href: "/app/settings", icon: Settings },
+    { name: "My Listings", href: "/app/listings", icon: MdSell },
     { name: "Components", href: "/app/z-components", icon: Component },
   ];
 

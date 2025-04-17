@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Clock } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
+import { Database } from "@/lib/types";
 
 // Interface definitions
 export interface Tenant {
@@ -21,7 +22,7 @@ export interface Lease {
   security_deposit: number;
   payment_due_day?: number;
   status: string | null;
-  payment_frequency: string | null;
+  payment_frequency: Database["public"]["Enums"]["payment_frequency"] | null;
   tenant_id: string | null;
   last_payment_date?: string;
   next_payment_date?: string;
@@ -46,7 +47,7 @@ export interface EditLeaseFormState {
   lease_end: string;
   rent_amount: number;
   security_deposit: number;
-  payment_frequency: string;
+  payment_frequency: Database["public"]["Enums"]["payment_frequency"];
   payment_due_day: number;
   status: string;
   currency: string;

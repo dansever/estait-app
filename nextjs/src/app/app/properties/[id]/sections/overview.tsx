@@ -79,7 +79,7 @@ export default function PropertyOverview({
         setLoading(true);
 
         const supabase = await createSPASassClient();
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("properties")
           .select("*")
           .eq("id", propertyId)
@@ -214,8 +214,8 @@ export default function PropertyOverview({
         <Info className="h-12 w-12 text-gray-400" />
         <p className="text-xl font-medium">Property not found</p>
         <p className="text-gray-500">
-          The property you're looking for doesn't exist or you don't have
-          permission to view it.
+          The property you&rsquo;re looking for doesn&rsquo;t exist or you
+          don&rsquo;t have permission to view it.
         </p>
       </div>
     );
@@ -665,10 +665,12 @@ export default function PropertyOverview({
                   setShowPhotoDialog(false);
                 }}
               >
-                <img
+                <Image
                   src={photo}
                   alt={`Property photo ${index + 1}`}
                   className="h-full w-full object-cover transition-transform hover:scale-105"
+                  layout="fill"
+                  objectFit="cover"
                 />
               </div>
             ))}

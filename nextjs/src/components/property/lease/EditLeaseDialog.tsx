@@ -275,7 +275,7 @@ export default function EditLeaseDialog({
               >
                 <option value="monthly">Monthly</option>
                 <option value="weekly">Weekly</option>
-                <option value="bi-weekly">Bi-Weekly</option>
+                <option value="biweekly">Biweekly</option>
                 <option value="quarterly">Quarterly</option>
                 <option value="annually">Annually</option>
               </select>

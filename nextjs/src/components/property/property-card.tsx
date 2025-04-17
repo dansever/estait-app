@@ -23,7 +23,9 @@ import { Home } from "lucide-react";
 // Define an enum for property status for better type safety
 export enum PropertyStatus {
   VACANT = "vacant",
-  RENTED = "rented",
+  OCCUPIED = "occupied",
+  MAINTENANCE = "maintenance",
+  LISTED = "listed",
 }
 
 interface PropertyCardProps {
@@ -113,8 +115,14 @@ export default function PropertyCard({
           >
             Vacant
           </Badge>
+        ) : status === PropertyStatus.OCCUPIED || status === "rented" ? (
+          <Badge className="bg-green-600">Occupied</Badge>
+        ) : status === PropertyStatus.MAINTENANCE ? (
+          <Badge className="bg-orange-600">Maintenance</Badge>
+        ) : status === PropertyStatus.LISTED ? (
+          <Badge className="bg-blue-600">Listed</Badge>
         ) : (
-          <Badge className="bg-green-600">Rented</Badge>
+          <Badge>Unknown</Badge>
         )}
       </CardFooter>
     </Card>
