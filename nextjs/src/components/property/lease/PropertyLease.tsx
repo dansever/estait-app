@@ -11,10 +11,11 @@ import TenantInfoCard from "./TenantInfoCard";
 import LeaseHistoryCard from "./LeaseHistoryCard";
 import EditLeaseDialog from "./EditLeaseDialog";
 import AddLeaseDialog from "./AddLeaseDialog";
+import { PropertyWithDetails } from "@/hooks/use-property-details";
 
 interface PropertyLeaseProps {
   propertyId: string;
-  lease?: any; // Contains the lease data with tenant info nested
+  lease?: PropertyWithDetails["current_lease"]; // Use the same type from the hook
   isLoading: boolean;
   onDataChanged?: () => Promise<void>;
 }
@@ -42,14 +43,21 @@ export default function PropertyLease({
           // If we're given a lease via props, use that directly
           setLease({
             id: initialLease.id,
-            lease_start: initialLease.lease_start,
-            lease_end: initialLease.lease_end,
-            rent_amount: initialLease.rent_amount,
-            security_deposit: initialLease.security_deposit,
+            tenant_id: initialLease.tenant_id,
+            lease_start: initialLease.lease_start || "",
+            lease_end: initialLease.lease_end || "",
+            rent_amount: initialLease.rent_amount ?? 0,
+            security_deposit: initialLease.security_deposit ?? 0,
             payment_due_day: initialLease.payment_due_day || 1,
             status: initialLease.status || "active",
-            payment_frequency: initialLease.payment_frequency || "monthly",
-            tenant_id: initialLease.tenant_id,
+            payment_frequency:
+              (initialLease.payment_frequency as
+                | "monthly"
+                | "weekly"
+                | "biweekly"
+                | "quarterly"
+                | "annually"
+                | null) || "monthly",
             currency: initialLease.currency || "USD",
           });
 
@@ -126,7 +134,9 @@ export default function PropertyLease({
 
   // Handle adding a new lease
   const handleAddLease = () => {
+    console.log("Adding new lease...");
     setShowAddLeaseDialog(true);
+    console.log("showAddLeaseDialog=", { showAddLeaseDialog });
   };
 
   // Handle editing an existing lease
@@ -178,8 +188,8 @@ export default function PropertyLease({
 
       {lease ? (
         <div className="grid gap-6 md:grid-cols-2">
-          <LeaseDetailsCard lease={lease} />
-          <TenantInfoCard tenant={tenant} isLoading={loadingTenant} />
+          <LeaseDetailsCard lease={lease} onAddLeaseClick={handleAddLease} />
+          <TenantInfoCard tenant={tenant} loading={loadingTenant} />
         </div>
       ) : (
         <div className="text-center p-10 border rounded-lg bg-gray-50">
@@ -188,7 +198,6 @@ export default function PropertyLease({
             This property currently doesn't have an active lease. Add a new
             lease to start managing it.
           </p>
-          <Button onClick={handleAddLease}>Add New Lease</Button>
         </div>
       )}
 
@@ -197,8 +206,8 @@ export default function PropertyLease({
       {/* Add Lease Dialog */}
       <AddLeaseDialog
         propertyId={propertyId}
-        showDialog={showAddLeaseDialog}
-        setShowDialog={setShowAddLeaseDialog}
+        open={showAddLeaseDialog}
+        setOpen={setShowAddLeaseDialog}
         onLeaseAdded={handleLeaseUpdated}
       />
 
@@ -206,8 +215,8 @@ export default function PropertyLease({
       {lease && (
         <EditLeaseDialog
           lease={lease}
-          showDialog={showEditLeaseDialog}
-          setShowDialog={setShowEditLeaseDialog}
+          open={showEditLeaseDialog}
+          setOpen={setShowEditLeaseDialog}
           onLeaseUpdated={handleLeaseUpdated}
         />
       )}

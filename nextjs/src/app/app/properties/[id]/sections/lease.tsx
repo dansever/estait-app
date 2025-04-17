@@ -1,10 +1,11 @@
 "use client";
 
 import { PropertyLease } from "@/components/property/lease";
+import { PropertyWithDetails } from "@/hooks/use-property-details";
 
 interface PropertyLeasePageProps {
   propertyId: string;
-  lease?: any;
+  lease?: PropertyWithDetails["current_lease"];
   isLoading: boolean;
   onDataChanged?: () => Promise<void>;
 }

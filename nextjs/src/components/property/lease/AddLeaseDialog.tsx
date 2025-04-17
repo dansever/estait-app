@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { createLease } from "@/lib/supabase/queries/leases";
-import { getAllTenants } from "@/lib/supabase/queries/tenants";
+import { getAllTenants, createTenant } from "@/lib/supabase/queries/tenants";
 import { Database } from "@/lib/types";
 import { Tenant } from "./lease-utils";
 import {
@@ -12,50 +12,52 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import {
   AlertCircle,
   Calendar,
+  DivideCircleIcon,
   DollarSign,
   Loader2,
   Users,
+  X,
 } from "lucide-react";
 import { Lease, fetchTenantById } from "./lease-utils";
+import { Constants } from "@/lib/types";
+import { MdHorizontalSplit } from "react-icons/md";
 
 // Type for lease creation from database schema
 type NewLease = Database["public"]["Tables"]["leases"]["Insert"];
+type NewTenant = Database["public"]["Tables"]["tenants"]["Insert"];
 
-// export interface Tenant {
-//   id: string;
-//   first_name: string;
-//   last_name: string;
-//   email: string | null;
-//   phone: string | null;
-//   notes: string | null;
-//   created_at: string | null;
-// }
+// List of supported currencies
+const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "ILS", "NIS"];
 
 interface AddLeaseDialogProps {
   propertyId: string;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onLeaseCreated: (newLease: Lease, newTenant: Tenant) => Promise<void>;
+  setOpen: (open: boolean) => void;
+  onLeaseAdded: () => Promise<void>;
 }
 
 export default function AddLeaseDialog({
   propertyId,
   open,
-  onOpenChange,
-  onLeaseCreated,
+  setOpen,
+  onLeaseAdded,
 }: AddLeaseDialogProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState<string>("");
+  const [tenantType, setTenantType] = useState<"existing" | "new">("existing");
 
   // Form fields
   const [leaseStart, setLeaseStart] = useState<string>("");
@@ -68,6 +70,13 @@ export default function AddLeaseDialog({
   const [paymentDueDay, setPaymentDueDay] = useState<string>("1");
   const [currency, setCurrency] = useState<string>("USD");
   const [notes, setNotes] = useState<string>("");
+
+  // New tenant fields
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [phone, setPhone] = useState<string>("");
+  const [tenantNotes, setTenantNotes] = useState<string>("");
 
   // Load tenants when dialog opens
   const loadTenants = async () => {
@@ -91,11 +100,12 @@ export default function AddLeaseDialog({
   };
 
   // Reset form when dialog opens/closes
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       loadTenants();
       // Reset form
       setTenantId("");
+      setTenantType("existing");
       setLeaseStart("");
       setLeaseEnd("");
       setRentAmount("");
@@ -105,14 +115,33 @@ export default function AddLeaseDialog({
       setCurrency("USD");
       setNotes("");
       setError("");
+
+      // Reset new tenant fields
+      setFirstName("");
+      setLastName("");
+      setEmail("");
+      setPhone("");
+      setTenantNotes("");
     }
   }, [open]);
 
   const handleAddLease = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!propertyId || !tenantId || !leaseStart || !leaseEnd || !rentAmount) {
+    // Basic validation
+    if (!propertyId || !leaseStart || !leaseEnd || !rentAmount) {
       setError("Please fill in all required fields");
+      return;
+    }
+
+    // Additional validation for new tenant
+    if (tenantType === "new") {
+      if (!firstName || !lastName) {
+        setError("Please fill in tenant's first and last name");
+        return;
+      }
+    } else if (!tenantId) {
+      setError("Please select a tenant");
       return;
     }
 
@@ -120,9 +149,30 @@ export default function AddLeaseDialog({
       setLoading(true);
       setError("");
 
+      // Create new tenant first if needed
+      let finalTenantId = tenantId;
+      let tenantData: Tenant | null = null;
+
+      if (tenantType === "new") {
+        const newTenant: NewTenant = {
+          first_name: firstName,
+          last_name: lastName,
+          email: email || null,
+          phone: phone || null,
+          notes: tenantNotes || null,
+        };
+
+        const createdTenant = await createTenant(newTenant);
+        if (!createdTenant) {
+          throw new Error("Failed to create tenant");
+        }
+        finalTenantId = createdTenant.id;
+        tenantData = createdTenant as Tenant;
+      }
+
       const newLease: NewLease = {
         property_id: propertyId,
-        tenant_id: tenantId,
+        tenant_id: finalTenantId,
         lease_start: leaseStart,
         lease_end: leaseEnd,
         rent_amount: parseFloat(rentAmount),
@@ -142,11 +192,12 @@ export default function AddLeaseDialog({
         throw new Error("Failed to create lease - no data returned");
       }
 
-      // Fetch the tenant data to pass back to parent
-      const tenantData = await fetchTenantById(tenantId);
-
-      if (!tenantData) {
-        throw new Error("Failed to retrieve tenant data");
+      // If we didn't create a new tenant, fetch the tenant data
+      if (tenantType === "existing") {
+        tenantData = await fetchTenantById(finalTenantId);
+        if (!tenantData) {
+          throw new Error("Failed to retrieve tenant data");
+        }
       }
 
       // Format lease object to match the Lease interface
@@ -163,15 +214,8 @@ export default function AddLeaseDialog({
         currency: createdLease.currency || "USD",
       };
 
-      // Convert tenant data to match Tenant interface in this file
-      const formattedTenant: Tenant = {
-        ...tenantData,
-        notes: tenantData.notes || undefined, // Convert null to undefined
-        created_at: tenantData.created_at || undefined, // Convert null to undefined
-      };
-
-      onOpenChange(false);
-      await onLeaseCreated(formattedLease, formattedTenant);
+      setOpen(false);
+      await onLeaseAdded();
     } catch (err) {
       console.error("Error adding lease:", err);
       setError("Failed to add lease");
@@ -181,10 +225,21 @@ export default function AddLeaseDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>Add New Lease</DialogTitle>
+          <div className="flex justify-between items-center">
+            <DialogTitle>Add New Lease</DialogTitle>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogClose>
+          </div>
           <DialogDescription>
             Create a new lease agreement for this property.
           </DialogDescription>
@@ -197,116 +252,204 @@ export default function AddLeaseDialog({
           </Alert>
         )}
 
-        <form onSubmit={handleAddLease} className="space-y-4 py-4">
+        <form onSubmit={handleAddLease} className="space-y-5 py-4">
+          {/* Tenant Section with Tabs */}
           <div className="space-y-2">
-            <label
-              htmlFor="tenant"
-              className="text-sm font-medium flex items-center"
-            >
+            <Label className="text-sm font-medium flex items-center">
               <Users className="h-4 w-4 mr-2" />
               Tenant
-            </label>
-            <select
-              id="tenant"
-              value={tenantId}
-              onChange={(e) => setTenantId(e.target.value)}
-              className="w-full p-2 border rounded-md"
-              required
+            </Label>
+
+            <Tabs
+              defaultValue="existing"
+              onValueChange={(value) =>
+                setTenantType(value as "existing" | "new")
+              }
             >
-              <option value="">Select a tenant</option>
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.first_name} {tenant.last_name}
-                </option>
-              ))}
-            </select>
+              <TabsList className="w-full grid grid-cols-2 mb-2">
+                <TabsTrigger value="existing">Existing Tenant</TabsTrigger>
+                <TabsTrigger value="new">New Tenant</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="existing" className="mt-0 pt-2">
+                <select
+                  id="tenant"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-white"
+                  required={tenantType === "existing"}
+                >
+                  <option value="">Select a tenant</option>
+                  {tenants.map((tenant) => (
+                    <option key={tenant.id} value={tenant.id}>
+                      {tenant.first_name} {tenant.last_name}
+                    </option>
+                  ))}
+                </select>
+              </TabsContent>
+
+              <TabsContent value="new" className="mt-0 space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="first-name">First Name</Label>
+                    <Input
+                      id="first-name"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      placeholder="John"
+                      className="bg-white"
+                      required={tenantType === "new"}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="last-name">Last Name</Label>
+                    <Input
+                      id="last-name"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      placeholder="Doe"
+                      className="bg-white"
+                      required={tenantType === "new"}
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="john.doe@example.com"
+                      className="bg-white"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone</Label>
+                    <Input
+                      id="phone"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+1 (555) 123-4567"
+                      className="bg-white"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
 
-          {/* Rest of the form remains the same */}
-          {/* ... existing form fields ... */}
+          <br />
+
+          {/* Lease Dates */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label
+              <Label
                 htmlFor="lease-start"
                 className="text-sm font-medium flex items-center"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Lease Start Date
-              </label>
+              </Label>
               <Input
                 id="lease-start"
                 type="date"
                 value={leaseStart}
                 onChange={(e) => setLeaseStart(e.target.value)}
+                className="bg-white"
                 required
               />
             </div>
             <div className="space-y-2">
-              <label
+              <Label
                 htmlFor="lease-end"
                 className="text-sm font-medium flex items-center"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Lease End Date
-              </label>
+              </Label>
               <Input
                 id="lease-end"
                 type="date"
                 value={leaseEnd}
                 onChange={(e) => setLeaseEnd(e.target.value)}
+                className="bg-white"
                 required
               />
             </div>
           </div>
 
+          {/* Currency, Rent, and Deposit Group */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center">
+              <DollarSign className="h-4 w-4 mr-2" />
+              Payment Details
+            </Label>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="currency" className="text-xs text-gray-500">
+                  Currency
+                </Label>
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full p-2 border rounded-md bg-white"
+                >
+                  {CURRENCIES.map((curr) => (
+                    <option key={curr} value={curr}>
+                      {curr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="rent-amount" className="text-xs text-gray-500">
+                  Monthly Rent
+                </Label>
+                <Input
+                  id="rent-amount"
+                  type="number"
+                  min="0"
+                  step="10"
+                  placeholder="1500"
+                  value={rentAmount}
+                  onChange={(e) => setRentAmount(e.target.value)}
+                  className="bg-white"
+                  required
+                />
+              </div>
+              <div>
+                <Label
+                  htmlFor="security-deposit"
+                  className="text-xs text-gray-500"
+                >
+                  Security Deposit
+                </Label>
+                <Input
+                  id="security-deposit"
+                  type="number"
+                  min="0"
+                  step="10"
+                  placeholder="3000"
+                  value={securityDeposit}
+                  onChange={(e) => setSecurityDeposit(e.target.value)}
+                  className="bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Schedule */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label
-                htmlFor="rent-amount"
-                className="text-sm font-medium flex items-center"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Monthly Rent
-              </label>
-              <Input
-                id="rent-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="1500.00"
-                value={rentAmount}
-                onChange={(e) => setRentAmount(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label
-                htmlFor="security-deposit"
-                className="text-sm font-medium flex items-center"
-              >
-                <DollarSign className="h-4 w-4 mr-2" />
-                Security Deposit
-              </label>
-              <Input
-                id="security-deposit"
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="1500.00"
-                value={securityDeposit}
-                onChange={(e) => setSecurityDeposit(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <label
+              <Label
                 htmlFor="payment-frequency"
                 className="text-sm font-medium"
               >
                 Payment Frequency
-              </label>
+              </Label>
               <select
                 id="payment-frequency"
                 value={paymentFrequency}
@@ -320,19 +463,19 @@ export default function AddLeaseDialog({
                       | "annually"
                   )
                 }
-                className="w-full p-2 border rounded-md"
+                className="w-full p-2 border rounded-md bg-white"
               >
-                <option value="monthly">Monthly</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Biweekly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="annually">Annually</option>
+                {Constants.public.Enums.payment_frequency.map((freq) => (
+                  <option key={freq} value={freq}>
+                    {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-2">
-              <label htmlFor="payment-due-day" className="text-sm font-medium">
+              <Label htmlFor="payment-due-day" className="text-sm font-medium">
                 Due Day
-              </label>
+              </Label>
               <Input
                 id="payment-due-day"
                 type="number"
@@ -341,37 +484,23 @@ export default function AddLeaseDialog({
                 placeholder="1"
                 value={paymentDueDay}
                 onChange={(e) => setPaymentDueDay(e.target.value)}
+                className="bg-white"
               />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="currency" className="text-sm font-medium">
-                Currency
-              </label>
-              <select
-                id="currency"
-                value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="CAD">CAD (C$)</option>
-                <option value="AUD">AUD (A$)</option>
-              </select>
             </div>
           </div>
 
+          {/* Notes */}
           <div className="space-y-2">
-            <label htmlFor="notes" className="text-sm font-medium">
+            <Label htmlFor="notes" className="text-sm font-medium">
               Notes
-            </label>
+            </Label>
             <Textarea
               id="notes"
               placeholder="Additional notes about this lease agreement"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
+              className="bg-white"
             />
           </div>
 
@@ -379,7 +508,7 @@ export default function AddLeaseDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => setOpen(false)}
               disabled={loading}
             >
               Cancel
