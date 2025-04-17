@@ -14,12 +14,10 @@ import AddLeaseDialog from "./AddLeaseDialog";
 
 interface PropertyLeaseProps {
   propertyId: string;
-  lease?: Lease | null; // Accept the lease passed from the parent component
+  lease?: any; // Contains the lease data with tenant info nested
   isLoading: boolean;
   onDataChanged?: () => Promise<void>;
 }
-
-// This interface is defined in AddLeaseDialog.tsx
 
 export default function PropertyLease({
   propertyId,
@@ -34,181 +32,185 @@ export default function PropertyLease({
   const [showAddLeaseDialog, setShowAddLeaseDialog] = useState(false);
   const [showEditLeaseDialog, setShowEditLeaseDialog] = useState(false);
 
-  // Fetch lease info for this property
+  // Fetch lease info for this property (if not provided via props)
   useEffect(() => {
     async function fetchLeaseInfo() {
       try {
         setLoadingLease(true);
 
-        const supabase = await createSPASassClient();
-        const { data, error } = await supabase
-          .from("leases")
-          .select("*")
-          .eq("property_id", propertyId)
-          .order("lease_start", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error && error.code !== "PGRST116") {
-          console.error("Error fetching lease:", error);
-          // No data found or other error
-        } else if (data) {
+        if (initialLease) {
+          // If we're given a lease via props, use that directly
           setLease({
-            ...data,
-            payment_due_day: data.payment_due_day ?? undefined,
+            id: initialLease.id,
+            lease_start: initialLease.lease_start,
+            lease_end: initialLease.lease_end,
+            rent_amount: initialLease.rent_amount,
+            security_deposit: initialLease.security_deposit,
+            payment_due_day: initialLease.payment_due_day || 1,
+            status: initialLease.status || "active",
+            payment_frequency: initialLease.payment_frequency || "monthly",
+            tenant_id: initialLease.tenant_id,
+            currency: initialLease.currency || "USD",
           });
 
-          // If we have a tenant ID, fetch the tenant data
-          if (data.tenant_id) {
-            const tenantData = await fetchTenantById(data.tenant_id);
-            setTenant(tenantData);
+          // Check if we have the tenant data inline in the lease
+          if (initialLease.tenant) {
+            setTenant(initialLease.tenant);
+            setLoadingTenant(false);
+          }
+          // Otherwise if we have a tenant ID, fetch it
+          else if (initialLease.tenant_id) {
+            try {
+              const tenantData = await fetchTenantById(initialLease.tenant_id);
+              setTenant(tenantData);
+            } catch (err) {
+              console.error("Error fetching tenant:", err);
+            } finally {
+              setLoadingTenant(false);
+            }
           } else {
             setLoadingTenant(false);
           }
         } else {
-          setLoadingTenant(false);
+          // Fallback to fetch lease if not provided via props
+          const supabase = await createSPASassClient();
+          const { data, error } = await supabase
+            .from("leases")
+            .select("*")
+            .eq("property_id", propertyId)
+            .order("lease_start", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (error && error.code !== "PGRST116") {
+            console.error("Error fetching lease:", error);
+          } else if (data) {
+            setLease({
+              ...data,
+              payment_due_day: data.payment_due_day ?? undefined,
+            });
+
+            // If we have a tenant ID, fetch the tenant data
+            if (data.tenant_id) {
+              try {
+                const tenantData = await fetchTenantById(data.tenant_id);
+                setTenant(tenantData);
+              } catch (err) {
+                console.error("Error fetching tenant:", err);
+              } finally {
+                setLoadingTenant(false);
+              }
+            } else {
+              setLoadingTenant(false);
+            }
+          } else {
+            setLoadingTenant(false);
+          }
         }
       } catch (err) {
         console.error("Error fetching lease info:", err);
-        setLoadingTenant(false);
       } finally {
         setLoadingLease(false);
       }
     }
 
-    // Always use the initialLease if provided (from parent)
-    if (initialLease) {
-      const formattedLease = {
-        id: initialLease.id,
-        lease_start: initialLease.lease_start,
-        lease_end: initialLease.lease_end,
-        rent_amount: initialLease.rent_amount,
-        security_deposit: initialLease.security_deposit,
-        payment_due_day: initialLease.payment_due_day || 1,
-        status: initialLease.status || "active",
-        payment_frequency: initialLease.payment_frequency || "monthly",
-        tenant_id: initialLease.tenant_id,
-        currency: initialLease.currency || "USD",
-      };
-      setLease(formattedLease);
+    fetchLeaseInfo();
+  }, [initialLease, propertyId]);
 
-      // If we have tenant data from the initial lease, use it directly
-      if (initialLease.tenant_id) {
-        (async () => {
-          if (initialLease.tenant_id) {
-            const tenantData = await fetchTenantById(initialLease.tenant_id);
-            setTenant(tenantData);
-          }
-        })();
-      } else {
-        setLoadingTenant(false);
-      }
-
-      setLoadingLease(false);
-    } else if (propertyId) {
-      fetchLeaseInfo();
+  // Handle lease update
+  const handleLeaseUpdated = async () => {
+    if (onDataChanged) {
+      await onDataChanged();
     }
-  }, [propertyId, initialLease]);
+  };
 
   // Handle adding a new lease
   const handleAddLease = () => {
     setShowAddLeaseDialog(true);
   };
 
-  // Handle editing lease
+  // Handle editing an existing lease
   const handleEditLease = () => {
     setShowEditLeaseDialog(true);
   };
 
-  // Handle lease update from edit dialog
-  const handleLeaseUpdated = async (updatedLease: Lease) => {
-    setLease(updatedLease);
-    // Refresh the parent's data to ensure we're showing the most up-to-date information
-    if (onDataChanged) {
-      await onDataChanged();
-    }
-  };
-
-  // Handle new lease creation
-  const handleLeaseCreated = async (newLease: Lease, newTenant: Tenant) => {
-    setLease(newLease);
-    setTenant(newTenant);
-    // Refresh the parent's data
-    if (onDataChanged) {
-      await onDataChanged();
-    }
-  };
-
+  // Show loading state
   if (isLoading || loadingLease) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <Skeleton className="h-9 w-40" />
+          <Skeleton className="h-9 w-48" />
           <Skeleton className="h-9 w-32" />
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid gap-6 md:grid-cols-2">
           <Skeleton className="h-64 w-full" />
-          <div className="space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-36 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+          <Skeleton className="h-64 w-full" />
         </div>
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Section headers */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <div className="flex items-center">
-          <FileSignature className="h-5 w-5 mr-2" />
-          <h2 className="text-xl font-bold">Lease & Tenants</h2>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleEditLease} disabled={!lease}>
-            <ClipboardEdit className="h-4 w-4 mr-2" /> Edit Lease
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-semibold">Lease Information</h2>
+        {lease ? (
+          <Button
+            onClick={handleEditLease}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ClipboardEdit className="h-4 w-4" />
+            Edit Lease
           </Button>
-          {!tenant && (
-            <Button onClick={handleAddLease}>
-              <FileSignature className="h-4 w-4 mr-2" /> New Lease
-            </Button>
-          )}
-        </div>
+        ) : (
+          <Button
+            onClick={handleAddLease}
+            variant="default"
+            className="flex items-center gap-2"
+          >
+            <FileSignature className="h-4 w-4" />
+            Add New Lease
+          </Button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Lease information */}
-        <LeaseDetailsCard lease={lease} onAddLeaseClick={handleAddLease} />
-
-        {/* Tenant information and lease history */}
-        <div className="space-y-6">
-          <TenantInfoCard
-            tenant={tenant}
-            lease={lease}
-            loading={loadingTenant}
-            onAddLeaseClick={handleAddLease}
-          />
-
-          <LeaseHistoryCard lease={lease} />
+      {lease ? (
+        <div className="grid gap-6 md:grid-cols-2">
+          <LeaseDetailsCard lease={lease} />
+          <TenantInfoCard tenant={tenant} isLoading={loadingTenant} />
         </div>
-      </div>
+      ) : (
+        <div className="text-center p-10 border rounded-lg bg-gray-50">
+          <h3 className="text-lg font-medium mb-2">No Active Lease</h3>
+          <p className="text-gray-600 mb-4">
+            This property currently doesn't have an active lease. Add a new
+            lease to start managing it.
+          </p>
+          <Button onClick={handleAddLease}>Add New Lease</Button>
+        </div>
+      )}
 
-      {/* Dialogs */}
-      <EditLeaseDialog
-        open={showEditLeaseDialog}
-        onOpenChange={setShowEditLeaseDialog}
-        lease={lease}
-        onLeaseUpdated={handleLeaseUpdated}
-      />
+      <LeaseHistoryCard propertyId={propertyId} />
 
+      {/* Add Lease Dialog */}
       <AddLeaseDialog
-        open={showAddLeaseDialog}
-        onOpenChange={setShowAddLeaseDialog}
         propertyId={propertyId}
-        onLeaseCreated={handleLeaseCreated}
+        showDialog={showAddLeaseDialog}
+        setShowDialog={setShowAddLeaseDialog}
+        onLeaseAdded={handleLeaseUpdated}
       />
+
+      {/* Edit Lease Dialog */}
+      {lease && (
+        <EditLeaseDialog
+          lease={lease}
+          showDialog={showEditLeaseDialog}
+          setShowDialog={setShowEditLeaseDialog}
+          onLeaseUpdated={handleLeaseUpdated}
+        />
+      )}
     </div>
   );
 }

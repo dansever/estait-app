@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
+import { Database } from "@/lib/types";
 import {
   Wrench,
   Plus,
@@ -14,7 +15,6 @@ import {
   Clock,
   CheckCheck,
   LayoutList,
-  User,
   Clock10,
   MoreVertical,
   Pencil,
@@ -48,16 +48,13 @@ interface PropertyMaintenanceProps {
 interface MaintenanceTask {
   id: string;
   title: string;
-  description: string;
+  description: string | null;
   task_status: "open" | "completed";
-  priority: "low" | "medium" | "high";
-  created_at: string;
+  priority: "low" | "medium" | "high" | null;
+  created_at: string | null;
   due_date: string | null;
-  assigned_to: {
-    id: string;
-    name: string;
-    avatar_url?: string | null;
-  } | null;
+  property_id?: string | null;
+  updated_at?: string | null;
 }
 
 export default function PropertyMaintenance({
@@ -72,6 +69,13 @@ export default function PropertyMaintenance({
   const [selectedTask, setSelectedTask] = useState<MaintenanceTask | null>(
     null
   );
+  const [newTask, setNewTask] = useState({
+    title: "",
+    description: "",
+    priority: "",
+    due_date: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch maintenance tasks for this property
   useEffect(() => {
@@ -80,109 +84,21 @@ export default function PropertyMaintenance({
         setLoadingTasks(true);
 
         const supabase = await createSPASassClient();
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("maintenance_tasks")
-          .select(
-            `
-            *,
-            assigned_to:user_id (
-              id,
-              name,
-              avatar_url
-            )
-          `
-          )
+          .select("*")
           .eq("property_id", propertyId)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
 
-        // Mock data for development
-        const mockTasks: MaintenanceTask[] = [
-          {
-            id: "1",
-            title: "Fix leaking kitchen faucet",
-            description:
-              "The kitchen sink faucet has been leaking steadily. Needs to be fixed asap before it causes water damage.",
-            task_status: "open",
-            priority: "high",
-            created_at: new Date().toISOString(),
-            due_date: new Date(
-              Date.now() + 3 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            assigned_to: {
-              id: "u1",
-              name: "John Smith",
-              avatar_url: null,
-            },
-          },
-          {
-            id: "2",
-            title: "Replace living room light fixtures",
-            description:
-              "The living room ceiling light is flickering and needs to be replaced.",
-            task_status: "open",
-            priority: "medium",
-            created_at: new Date(
-              Date.now() - 3 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            due_date: new Date(
-              Date.now() + 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            assigned_to: null,
-          },
-          {
-            id: "3",
-            title: "Annual HVAC maintenance",
-            description:
-              "Schedule the annual maintenance for the HVAC system before winter.",
-            task_status: "completed",
-            priority: "medium",
-            created_at: new Date(
-              Date.now() - 15 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            due_date: new Date(
-              Date.now() - 2 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            assigned_to: {
-              id: "u2",
-              name: "Sarah Johnson",
-              avatar_url: null,
-            },
-          },
-          {
-            id: "4",
-            title: "Repaint bathroom ceiling",
-            description:
-              "The bathroom ceiling has some mold spots that need to be treated and repainted.",
-            task_status: "open",
-            priority: "low",
-            created_at: new Date(
-              Date.now() - 7 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            due_date: new Date(
-              Date.now() + 14 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            assigned_to: null,
-          },
-          {
-            id: "5",
-            title: "Fix broken window blinds",
-            description:
-              "The blinds in the master bedroom are broken and need to be replaced.",
-            task_status: "open",
-            priority: "low",
-            created_at: new Date(
-              Date.now() - 30 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-            due_date: null,
-            assigned_to: null,
-          },
-        ];
-
-        setTasks(mockTasks);
+        if (data) {
+          setTasks(data);
+        }
       } catch (err) {
         console.error("Error fetching maintenance tasks:", err);
+        // Use mock data in case of error
+        setTasks(getMockTasks());
       } finally {
         setLoadingTasks(false);
       }
@@ -192,6 +108,191 @@ export default function PropertyMaintenance({
       fetchMaintenanceTasks();
     }
   }, [propertyId]);
+
+  const getMockTasks = (): MaintenanceTask[] => {
+    return [
+      {
+        id: "1",
+        title: "Fix leaking kitchen faucet",
+        description:
+          "The kitchen sink faucet has been leaking steadily. Needs to be fixed asap before it causes water damage.",
+        task_status: "open",
+        priority: "high",
+        created_at: new Date().toISOString(),
+        due_date: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "2",
+        title: "Replace living room light fixtures",
+        description:
+          "The living room ceiling light is flickering and needs to be replaced.",
+        task_status: "open",
+        priority: "medium",
+        created_at: new Date(
+          Date.now() - 3 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "3",
+        title: "Annual HVAC maintenance",
+        description:
+          "Schedule the annual maintenance for the HVAC system before winter.",
+        task_status: "completed",
+        priority: "medium",
+        created_at: new Date(
+          Date.now() - 15 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        due_date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "4",
+        title: "Repaint bathroom ceiling",
+        description:
+          "The bathroom ceiling has some mold spots that need to be treated and repainted.",
+        task_status: "open",
+        priority: "low",
+        created_at: new Date(
+          Date.now() - 7 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
+      },
+      {
+        id: "5",
+        title: "Fix broken window blinds",
+        description:
+          "The blinds in the master bedroom are broken and need to be replaced.",
+        task_status: "open",
+        priority: "low",
+        created_at: new Date(
+          Date.now() - 30 * 24 * 60 * 60 * 1000
+        ).toISOString(),
+        due_date: null,
+      },
+    ];
+  };
+
+  // Handle form input changes
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { id, value } = e.target;
+    setNewTask({
+      ...newTask,
+      [id]: value,
+    });
+  };
+
+  // Create a new maintenance task
+  const handleCreateTask = async () => {
+    if (!newTask.title || !newTask.priority) {
+      // You could add validation feedback here
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const supabase = await createSPASassClient();
+
+      const taskToInsert = {
+        title: newTask.title,
+        description: newTask.description || null,
+        priority: newTask.priority as Database["public"]["Enums"]["priority "],
+        due_date: newTask.due_date || null,
+        property_id: propertyId,
+        task_status: "open" as Database["public"]["Enums"]["task_status"],
+      };
+
+      const { data, error } = await supabase
+        .from("maintenance_tasks")
+        .insert(taskToInsert)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setTasks((prevTasks) => [data, ...prevTasks]);
+        setShowNewTaskDialog(false);
+        resetNewTaskForm();
+      }
+    } catch (err) {
+      console.error("Error creating task:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Update task status (e.g., mark as completed)
+  const handleUpdateTaskStatus = async (
+    taskId: string,
+    newStatus: "open" | "completed"
+  ) => {
+    try {
+      const supabase = await createSPASassClient();
+
+      const { error } = await supabase
+        .from("maintenance_tasks")
+        .update({
+          task_status: newStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", taskId);
+
+      if (error) throw error;
+
+      // Update local state
+      setTasks((prevTasks) =>
+        prevTasks.map((task) =>
+          task.id === taskId ? { ...task, task_status: newStatus } : task
+        )
+      );
+
+      // Close dialog if open
+      if (showTaskDetailsDialog && selectedTask?.id === taskId) {
+        setSelectedTask({ ...selectedTask, task_status: newStatus });
+      }
+    } catch (err) {
+      console.error("Error updating task:", err);
+    }
+  };
+
+  // Delete a task
+  const handleDeleteTask = async (task: MaintenanceTask) => {
+    try {
+      const supabase = await createSPASassClient();
+
+      const { error } = await supabase
+        .from("maintenance_tasks")
+        .delete()
+        .eq("id", task.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setTasks((prevTasks) => prevTasks.filter((t) => t.id !== task.id));
+
+      // Close dialog if open
+      if (showTaskDetailsDialog) {
+        setShowTaskDetailsDialog(false);
+      }
+    } catch (err) {
+      console.error("Delete task error:", err);
+    }
+  };
+
+  // Reset form after submission
+  const resetNewTaskForm = () => {
+    setNewTask({
+      title: "",
+      description: "",
+      priority: "",
+      due_date: "",
+    });
+  };
 
   // Filter tasks based on active tab
   const filteredTasks = tasks.filter((task) => {
@@ -251,7 +352,7 @@ export default function PropertyMaintenance({
   };
 
   // Get priority badge
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: string | null) => {
     switch (priority) {
       case "high":
         return <Badge className="bg-orange-600">High</Badge>;
@@ -272,11 +373,6 @@ export default function PropertyMaintenance({
   const handleEditTask = (task: MaintenanceTask) => {
     // Implement edit functionality
     console.log("Edit task:", task.id);
-  };
-
-  const handleDeleteTask = (task: MaintenanceTask) => {
-    // Implement delete functionality
-    console.log("Delete task:", task.id);
   };
 
   if (isLoading) {
@@ -422,28 +518,6 @@ export default function PropertyMaintenance({
                         </DropdownMenu>
                       </div>
 
-                      {task.assigned_to ? (
-                        <div className="flex items-center text-sm">
-                          <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs mr-2">
-                            {task.assigned_to.avatar_url ? (
-                              <img
-                                src={task.assigned_to.avatar_url}
-                                alt={task.assigned_to.name}
-                                className="h-full w-full rounded-full"
-                              />
-                            ) : (
-                              task.assigned_to.name.charAt(0)
-                            )}
-                          </div>
-                          {task.assigned_to.name}
-                        </div>
-                      ) : (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <User className="h-4 w-4 mr-1" />
-                          Unassigned
-                        </div>
-                      )}
-
                       {task.due_date && (
                         <div className="text-sm">
                           <span className="text-gray-500">Due:</span>{" "}
@@ -488,7 +562,12 @@ export default function PropertyMaintenance({
               <label htmlFor="title" className="text-sm font-medium">
                 Task Title
               </label>
-              <Input id="title" placeholder="Enter task title" />
+              <Input
+                id="title"
+                placeholder="Enter task title"
+                value={newTask.title}
+                onChange={handleInputChange}
+              />
             </div>
 
             <div className="space-y-2">
@@ -499,6 +578,8 @@ export default function PropertyMaintenance({
                 id="description"
                 placeholder="Describe the maintenance task in detail"
                 className="min-h-[100px]"
+                value={newTask.description}
+                onChange={handleInputChange}
               />
             </div>
 
@@ -507,7 +588,12 @@ export default function PropertyMaintenance({
                 <label htmlFor="priority" className="text-sm font-medium">
                   Priority
                 </label>
-                <select id="priority" className="w-full p-2 border rounded-md">
+                <select
+                  id="priority"
+                  className="w-full p-2 border rounded-md"
+                  value={newTask.priority}
+                  onChange={handleInputChange}
+                >
                   <option value="">Select priority</option>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
@@ -519,20 +605,13 @@ export default function PropertyMaintenance({
                 <label htmlFor="due_date" className="text-sm font-medium">
                   Due Date
                 </label>
-                <Input id="due_date" type="date" />
+                <Input
+                  id="due_date"
+                  type="date"
+                  value={newTask.due_date}
+                  onChange={handleInputChange}
+                />
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="assigned_to" className="text-sm font-medium">
-                Assign To
-              </label>
-              <select id="assigned_to" className="w-full p-2 border rounded-md">
-                <option value="">Select a person</option>
-                <option value="u1">John Smith</option>
-                <option value="u2">Sarah Johnson</option>
-                <option value="u3">Mike Robinson</option>
-              </select>
             </div>
           </div>
           <DialogFooter>
@@ -542,7 +621,9 @@ export default function PropertyMaintenance({
             >
               Cancel
             </Button>
-            <Button>Create Task</Button>
+            <Button onClick={handleCreateTask} disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Task"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -591,35 +672,6 @@ export default function PropertyMaintenance({
                     </p>
                   )}
                 </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm font-medium text-gray-500">
-                    Assigned To:
-                  </p>
-                  {selectedTask.assigned_to ? (
-                    <div className="flex items-center">
-                      <div className="h-6 w-6 rounded-full bg-gray-200 flex items-center justify-center text-xs mr-2">
-                        {selectedTask.assigned_to.avatar_url ? (
-                          <img
-                            src={selectedTask.assigned_to.avatar_url}
-                            alt={selectedTask.assigned_to.name}
-                            className="h-full w-full rounded-full"
-                          />
-                        ) : (
-                          selectedTask.assigned_to.name.charAt(0)
-                        )}
-                      </div>
-                      <span className="text-sm">
-                        {selectedTask.assigned_to.name}
-                      </span>
-                    </div>
-                  ) : (
-                    <p className="text-sm flex items-center text-gray-500">
-                      <User className="h-4 w-4 mr-1" />
-                      Unassigned
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
             <DialogFooter className="flex flex-col sm:flex-row gap-2">
@@ -637,7 +689,13 @@ export default function PropertyMaintenance({
               >
                 <Pencil className="h-4 w-4 mr-2" /> Edit
               </Button>
-              <Button>Mark as Completed</Button>
+              <Button
+                onClick={() =>
+                  handleUpdateTaskStatus(selectedTask.id, "completed")
+                }
+              >
+                Mark as Completed
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

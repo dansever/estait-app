@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
-import { getPropertyById } from "@/lib/supabase/queries/properties";
-import { createSPASassClient } from "@/lib/supabase/client";
+import { useParams, useRouter } from "next/navigation";
 import { NavTabs, TabItem } from "@/components/layout/navTabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Database } from "@/lib/types";
 import {
   ArrowLeft,
   Users,
@@ -29,159 +26,29 @@ import PropertyMaintenance from "./sections/maintenance";
 
 // Import utilities for currency formatting
 import { formatCurrency } from "@/components/property/lease/lease-utils";
-
-type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
-  address?: {
-    street: string | null;
-    apartment_number: string | null;
-    city: string | null;
-    state: string | null;
-    zip_code: string | null;
-  } | null;
-  current_lease?: {
-    id: string;
-    lease_start: string | null;
-    lease_end: string | null;
-    rent_amount: number | null;
-    security_deposit: number | null;
-    payment_due_day: number | null;
-    payment_frequency: string | null;
-    currency: string;
-    status: string | null;
-    tenant_id: string | null;
-    tenant?: {
-      id: string;
-      first_name: string | null;
-      last_name: string | null;
-      email: string | null;
-      phone: string | null;
-    } | null;
-  } | null;
-};
+import { usePropertyDetails } from "@/hooks/use-property-details";
 
 export default function PropertyDetailsPage() {
   const router = useRouter();
   const params = useParams();
   const propertyId = params.id as string;
-
-  const [property, setProperty] = useState<PropertyWithDetails | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [propertyImage, setPropertyImage] = useState<string | null>(null);
 
-  // Fetch property data with related details
-  const fetchPropertyDetails = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+  // Use our centralized hook for property details
+  const {
+    property,
+    isLoading,
+    error,
+    refreshProperty,
+    getFormattedAddress,
+    getPropertyStatus,
+  } = usePropertyDetails(propertyId);
 
-      // Get base property data
-      const propertyData = await getPropertyById(propertyId);
-      if (!propertyData) {
-        setError("Property not found");
-        return;
-      }
-
-      // Set a placeholder image
-      const imageIndex = Math.floor(Math.random() * 4) + 1;
-      setPropertyImage(`/stock_photos/apartment_${imageIndex}.jpg`);
-
-      // Fetch related data
-      const supabase = await createSPASassClient();
-
-      // Get address
-      let address = null;
-      if (propertyData.address_id) {
-        const { data: addressData } = await supabase
-          .from("addresses")
-          .select("*")
-          .eq("id", propertyData.address_id)
-          .single();
-        address = addressData;
-      }
-
-      // Get current lease and tenant with ALL fields
-      let lease = null;
-      const currentDate = new Date().toISOString();
-      const { data: leaseData } = await supabase
-        .from("leases")
-        .select(
-          `
-          id,
-          lease_start,
-          lease_end,
-          rent_amount,
-          security_deposit,
-          payment_due_day,
-          payment_frequency,
-          currency,
-          status,
-          tenant_id,
-          tenant:tenant_id (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          )
-        `
-        )
-        .eq("property_id", propertyId)
-        .lte("lease_start", currentDate)
-        .gte("lease_end", currentDate)
-        .order("lease_start", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (leaseData) {
-        lease = {
-          ...leaseData,
-          payment_due_day: leaseData.payment_due_day ?? null,
-        };
-      }
-
-      // Combine all data
-      setProperty({
-        ...propertyData,
-        address,
-        current_lease: lease,
-      });
-    } catch (err) {
-      console.error("Error fetching property details:", err);
-      setError("Failed to load property details");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Set a placeholder image
   useEffect(() => {
-    if (propertyId) {
-      fetchPropertyDetails();
-    }
-  }, [propertyId]);
-
-  // Format full address string
-  const formatAddress = (address: PropertyWithDetails["address"]) => {
-    if (!address) return "Address not available";
-
-    const parts = [];
-    if (address.street) parts.push(address.street);
-    if (address.apartment_number) parts.push(`#${address.apartment_number}`);
-    if (address.city) parts.push(address.city);
-    if (address.state) parts.push(address.state);
-    if (address.zip_code) parts.push(address.zip_code);
-
-    return parts.join(", ");
-  };
-
-  // Use property's status field from schema or determine based on lease as fallback
-  const getStatus = () => {
-    if (property?.property_status) {
-      return property.property_status;
-    }
-    // Fallback to legacy method if property_status is not present
-    return property?.current_lease ? "occupied" : "vacant";
-  };
+    const imageIndex = Math.floor(Math.random() * 4) + 1;
+    setPropertyImage(`/stock_photos/apartment_${imageIndex}.jpg`);
+  }, []);
 
   // Define the tabs for the property sections
   const tabs: TabItem[] = [
@@ -202,7 +69,7 @@ export default function PropertyDetailsPage() {
           propertyId={propertyId}
           lease={property?.current_lease}
           isLoading={isLoading}
-          onDataChanged={fetchPropertyDetails}
+          onDataChanged={refreshProperty}
         />
       ),
     },
@@ -285,34 +152,34 @@ export default function PropertyDetailsPage() {
               <h1 className="text-3xl font-bold">{property?.title}</h1>
               <p className="text-lg text-gray-600 flex items-start gap-2 mt-1">
                 <MapPin className="h-5 w-5 mt-1 text-gray-400 flex-shrink-0" />
-                {formatAddress(property?.address)}
+                {getFormattedAddress(property?.address)}
               </p>
 
               <div className="flex flex-wrap items-center gap-3 mt-4">
                 {/* Status Badge */}
-                {getStatus() === "vacant" ? (
+                {getPropertyStatus() === "vacant" ? (
                   <Badge
                     variant="outline"
                     className="border-yellow-500 text-yellow-600"
                   >
                     Vacant
                   </Badge>
-                ) : getStatus() === "occupied" ? (
+                ) : getPropertyStatus() === "occupied" ? (
                   <Badge className="bg-green-600">Occupied</Badge>
-                ) : getStatus() === "maintenance" ? (
+                ) : getPropertyStatus() === "maintenance" ? (
                   <Badge className="bg-orange-600">Maintenance</Badge>
-                ) : getStatus() === "listed" ? (
+                ) : getPropertyStatus() === "listed" ? (
                   <Badge className="bg-blue-600">Listed</Badge>
                 ) : (
                   <Badge>Unknown</Badge>
                 )}
 
-                {property?.current_lease && (
+                {property?.current_lease?.tenant && (
                   <div className="flex items-center gap-2">
                     <span className="text-gray-500">Tenant:</span>
                     <span className="font-medium">
-                      {property?.current_lease?.tenant?.first_name}{" "}
-                      {property?.current_lease?.tenant?.last_name}
+                      {property.current_lease.tenant.first_name}{" "}
+                      {property.current_lease.tenant.last_name}
                     </span>
                   </div>
                 )}

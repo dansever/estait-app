@@ -1,17 +1,13 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useGlobal } from "@/lib/context/GlobalContext";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  AlertCircle,
-  Plus,
-} from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
-import PropertyCard, { PropertyStatus } from "@/components/property/property-card";
+import PropertyCard, {
+  PropertyStatus,
+} from "@/components/property/property-card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";
@@ -58,13 +54,7 @@ export default function PropertiesPage() {
   const [propertiesLoading, setPropertiesLoading] = useState(true);
   const [propertiesError, setPropertiesError] = useState("");
 
-  useEffect(() => {
-    if (user?.id) {
-      loadProperties();
-    }
-  }, [user]);
-
-  const loadProperties = async () => {
+  const loadProperties = useCallback(async () => {
     try {
       setPropertiesLoading(true);
       setPropertiesError("");
@@ -143,7 +133,9 @@ export default function PropertiesPage() {
           const addressString = addressParts.join(", ");
 
           // Determine status based on current lease
-          const status = property.current_lease ? PropertyStatus.RENTED : PropertyStatus.VACANT;
+          const status = property.current_lease
+            ? PropertyStatus.OCCUPIED
+            : PropertyStatus.VACANT;
 
           // Get rental price from current lease or default to 0
           const rentalPrice = property.current_lease?.rent_amount || 0;
@@ -170,15 +162,21 @@ export default function PropertiesPage() {
     } finally {
       setPropertiesLoading(false);
     }
-  };
+  }, [user]);
 
   const handleAddProperty = () => {
     router.push("/app/properties/new");
   };
 
+  useEffect(() => {
+    if (user?.id) {
+      loadProperties();
+      setPropertiesLoading(false);
+    }
+  }, [user, loadProperties]);
+
   return (
-    <div className="space-y-6 p-6">
-      {/* Properties Section */}
+    <div>
       <div className="mb-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold">My Properties</h2>

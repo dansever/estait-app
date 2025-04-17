@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { createSPASassClient } from "@/lib/supabase/client";
 import Image from "next/image";
 import {
   MapPin,
@@ -35,98 +34,43 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+// Import the usePropertyDetails hook
+import { usePropertyDetails } from "@/hooks/use-property-details";
 
 interface PropertyOverviewProps {
   propertyId: string;
   isLoading: boolean;
 }
 
-interface PropertyDetails {
-  id: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  type: string;
-  bedrooms: number;
-  bathrooms: number;
-  square_feet: number;
-  year_built: number;
-  purchase_price?: number;
-  purchase_date?: string;
-  current_value?: number;
-  status: "occupied" | "vacant" | "maintenance" | "listed";
-  description?: string;
-  parking_spaces?: number;
-  photos: string[];
-}
-
 export default function PropertyOverview({
   propertyId,
-  isLoading,
+  isLoading: parentIsLoading,
 }: PropertyOverviewProps) {
-  const [property, setProperty] = useState<PropertyDetails | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Use the hook to get real property data instead of mock data
+  const {
+    property,
+    isLoading: hookIsLoading,
+    error,
+    refreshProperty,
+    getFormattedAddress,
+    getPropertyStatus,
+  } = usePropertyDetails(propertyId);
+
+  // Combined loading state
+  const isLoading = parentIsLoading || hookIsLoading;
+
+  // UI state
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showPhotoDialog, setShowPhotoDialog] = useState(false);
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
-  // Fetch property details
-  useEffect(() => {
-    async function fetchPropertyDetails() {
-      try {
-        setLoading(true);
-
-        const supabase = await createSPASassClient();
-        const { error } = await supabase
-          .from("properties")
-          .select("*")
-          .eq("id", propertyId)
-          .single();
-
-        if (error) throw error;
-
-        // Mock data for development
-        const mockProperty: PropertyDetails = {
-          id: propertyId,
-          name: "Sunset Terrace Apartment",
-          address: "123 Main Street, Apt 4B",
-          city: "Springfield",
-          state: "IL",
-          zip: "62704",
-          type: "apartment",
-          bedrooms: 2,
-          bathrooms: 1.5,
-          square_feet: 950,
-          year_built: 2010,
-          purchase_price: 180000,
-          purchase_date: "2020-03-15",
-          current_value: 210000,
-          status: "occupied",
-          description:
-            "Modern apartment in a quiet neighborhood with great amenities. Close to downtown and public transportation.",
-          parking_spaces: 1,
-          photos: [
-            "/stock_photos/apartment_1.jpg",
-            "/stock_photos/apartment_2.jpg",
-            "/stock_photos/apartment_3.jpg",
-            "/stock_photos/apartment_4.jpg",
-          ],
-        };
-
-        setProperty(mockProperty);
-      } catch (err) {
-        console.error("Error fetching property details:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    if (propertyId) {
-      fetchPropertyDetails();
-    }
-  }, [propertyId]);
+  // Stock photos for property visualizations
+  const stockPhotos = [
+    "/stock_photos/apartment_1.jpg",
+    "/stock_photos/apartment_2.jpg",
+    "/stock_photos/apartment_3.jpg",
+    "/stock_photos/apartment_4.jpg",
+  ];
 
   // Format date for display
   const formatDate = (dateString: string | undefined | null) => {
@@ -135,61 +79,30 @@ export default function PropertyOverview({
   };
 
   // Format currency
-  const formatCurrency = (amount: number | undefined) => {
-    if (amount === undefined) return "N/A";
+  const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: "USD",
+      currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
-  // Get property status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "occupied":
-        return <Badge className="bg-green-600">Occupied</Badge>;
-      case "vacant":
-        return (
-          <Badge
-            variant="outline"
-            className="border-yellow-500 text-yellow-600"
-          >
-            Vacant
-          </Badge>
-        );
-      case "maintenance":
-        return (
-          <Badge
-            variant="outline"
-            className="border-orange-500 text-orange-600"
-          >
-            Maintenance
-          </Badge>
-        );
-      case "listed":
-        return <Badge className="bg-blue-600">Listed</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-
   // Handle viewing next photo
   const handleNextPhoto = () => {
     setActivePhotoIndex((prev) =>
-      prev === (property?.photos.length || 0) - 1 ? 0 : prev + 1
+      prev === (stockPhotos.length || 0) - 1 ? 0 : prev + 1
     );
   };
 
   // Handle viewing previous photo
   const handlePrevPhoto = () => {
     setActivePhotoIndex((prev) =>
-      prev === 0 ? (property?.photos.length || 0) - 1 : prev - 1
+      prev === 0 ? (stockPhotos.length || 0) - 1 : prev - 1
     );
   };
 
-  if (isLoading || loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -221,6 +134,28 @@ export default function PropertyOverview({
     );
   }
 
+  // Extract key property values for presentation
+  const propertyType = property.property_type || "apartment";
+  const bedrooms = property.bedrooms || 2;
+  const bathrooms = property.bathrooms || 1;
+  const size = property.size || 0;
+  const yearBuilt = property.year_built || 2010;
+  const parkingSpaces = property.parking_spaces || 1;
+  const status = getPropertyStatus();
+
+  // Extract untis of measure
+  const propertyCurrency = property.currency || "USD";
+  const rentCurrency = property.current_lease?.currency || "USD";
+  const unitOfMeasure = property.unit_system || "imperial";
+
+  // Financial information
+  const purchasePrice = property.purchase_price || 180000;
+  const purchaseDate = property.purchase_date || null;
+  const currentValue = property.current_value || purchasePrice * 1.15;
+  const monthlyIncome = property.current_lease?.rent_amount || 0;
+  const monthlyExpenses = 350; // Estimate or mock for now
+  const cashFlow = monthlyIncome - monthlyExpenses;
+
   return (
     <div className="space-y-6">
       {/* Section headers */}
@@ -239,10 +174,10 @@ export default function PropertyOverview({
         <div className="lg:col-span-2">
           <Card>
             <div className="relative w-full h-[300px] overflow-hidden">
-              {property.photos && property.photos.length > 0 ? (
+              {stockPhotos && stockPhotos.length > 0 ? (
                 <>
                   <Image
-                    src={property.photos[activePhotoIndex]}
+                    src={stockPhotos[activePhotoIndex]}
                     alt={`Property photo ${activePhotoIndex + 1}`}
                     className="w-full h-full object-cover"
                     layout="fill"
@@ -286,7 +221,7 @@ export default function PropertyOverview({
                     </Button>
                   </div>
                   <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm px-2 py-1 rounded text-sm">
-                    {activePhotoIndex + 1} / {property.photos.length}
+                    {activePhotoIndex + 1} / {stockPhotos.length}
                   </div>
                 </>
               ) : (
@@ -305,48 +240,42 @@ export default function PropertyOverview({
               <div className="flex flex-wrap gap-6">
                 <div className="flex items-center">
                   <BedDouble className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="font-medium">{property.bedrooms} Beds</span>
+                  <span className="font-medium">{bedrooms} Beds</span>
                 </div>
                 <div className="flex items-center">
                   <Bath className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="font-medium">
-                    {property.bathrooms} Baths
-                  </span>
+                  <span className="font-medium">{bathrooms} Baths</span>
                 </div>
                 <div className="flex items-center">
                   <TbRulerMeasure className="h-5 w-5 mr-2 text-gray-400" />
                   <span className="font-medium">
-                    {property.square_feet.toLocaleString()} sq ft
+                    {size.toLocaleString()}{" "}
+                    {unitOfMeasure === "imperial" ? "ft²" : "m²"}
                   </span>
                 </div>
-                {property.parking_spaces && (
+                {parkingSpaces && (
                   <div className="flex items-center">
                     <Car className="h-5 w-5 mr-2 text-gray-400" />
-                    <span className="font-medium">
-                      {property.parking_spaces} Parking
-                    </span>
+                    <span className="font-medium">{parkingSpaces} Parking</span>
                   </div>
                 )}
                 <div className="flex items-center">
                   <Building className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="font-medium capitalize">
-                    {property.type}
-                  </span>
+                  <span className="font-medium capitalize">{propertyType}</span>
                 </div>
                 <div className="flex items-center">
                   <Calendar className="h-5 w-5 mr-2 text-gray-400" />
-                  <span className="font-medium">
-                    Built {property.year_built}
-                  </span>
+                  <span className="font-medium">Built {yearBuilt}</span>
                 </div>
               </div>
 
               <div className="mt-4">
-                <h3 className="font-medium text-lg">{property.name}</h3>
+                <h3 className="font-medium text-lg">
+                  {property.title || "Property Title"}
+                </h3>
                 <p className="flex items-center text-gray-600 mt-1">
                   <MapPin className="h-4 w-4 mr-2" />
-                  {property.address}, {property.city}, {property.state}{" "}
-                  {property.zip}
+                  {getFormattedAddress(property.address)}
                 </p>
 
                 {property.description && (
@@ -365,7 +294,20 @@ export default function PropertyOverview({
             <CardHeader className="pb-2">
               <CardTitle className="text-lg flex items-center justify-between">
                 <span>Property Details</span>
-                {getStatusBadge(property.status)}
+                <Badge
+                  variant={status === "vacant" ? "outline" : "default"}
+                  className={
+                    status === "vacant"
+                      ? "border-yellow-500 text-yellow-600"
+                      : status === "occupied"
+                      ? "bg-green-600"
+                      : status === "maintenance"
+                      ? "bg-orange-600"
+                      : "bg-blue-600"
+                  }
+                >
+                  {status.charAt(0).toUpperCase() + status.slice(1)}
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -375,14 +317,12 @@ export default function PropertyOverview({
                   <div>
                     <p className="text-sm text-gray-500">Purchase Price</p>
                     <p className="font-medium">
-                      {formatCurrency(property.purchase_price)}
+                      {formatCurrency(purchasePrice, propertyCurrency)}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Purchase Date</p>
-                    <p className="font-medium">
-                      {formatDate(property.purchase_date)}
-                    </p>
+                    <p className="font-medium">{formatDate(purchaseDate)}</p>
                   </div>
                 </div>
               </div>
@@ -390,23 +330,20 @@ export default function PropertyOverview({
               <div>
                 <p className="text-sm text-gray-500">Current Value</p>
                 <p className="font-medium text-lg">
-                  {formatCurrency(property.current_value)}
+                  {formatCurrency(currentValue, propertyCurrency)}
                 </p>
-                {property.purchase_price && property.current_value && (
+                {purchasePrice && currentValue && (
                   <div className="flex items-center text-sm mt-1">
                     <Badge
                       className={
-                        property.current_value > property.purchase_price
+                        currentValue > purchasePrice
                           ? "bg-green-600"
                           : "bg-red-600"
                       }
                     >
-                      {property.current_value > property.purchase_price
-                        ? "+"
-                        : ""}
+                      {currentValue > purchasePrice ? "+" : ""}
                       {(
-                        ((property.current_value - property.purchase_price) /
-                          property.purchase_price) *
+                        ((currentValue - purchasePrice) / purchasePrice) *
                         100
                       ).toFixed(1)}
                       %
@@ -436,17 +373,25 @@ export default function PropertyOverview({
                 <div className="grid grid-cols-2 gap-y-2">
                   <div>
                     <p className="text-sm text-gray-500">Monthly Income</p>
-                    <p className="font-medium">{formatCurrency(1200)}</p>
+                    <p className="font-medium">
+                      {formatCurrency(monthlyIncome, rentCurrency)}
+                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Monthly Expenses</p>
-                    <p className="font-medium">{formatCurrency(350)}</p>
+                    <p className="font-medium">
+                      {formatCurrency(monthlyExpenses, rentCurrency)}
+                    </p>
                   </div>
                 </div>
                 <div>
                   <p className="text-sm text-gray-500">Cash Flow</p>
-                  <p className="font-medium text-green-600">
-                    {formatCurrency(850)} / month
+                  <p
+                    className={`font-medium ${
+                      cashFlow >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                  >
+                    {formatCurrency(cashFlow, rentCurrency)} / month
                   </p>
                 </div>
                 <div className="pt-2">
@@ -492,14 +437,17 @@ export default function PropertyOverview({
               <label htmlFor="property-name" className="text-sm font-medium">
                 Property Name
               </label>
-              <Input id="property-name" defaultValue={property.name} />
+              <Input id="property-name" defaultValue={property.title || ""} />
             </div>
 
             <div className="space-y-2">
               <label htmlFor="property-address" className="text-sm font-medium">
                 Address
               </label>
-              <Input id="property-address" defaultValue={property.address} />
+              <Input
+                id="property-address"
+                defaultValue={property.address?.street || ""}
+              />
             </div>
 
             <div className="grid grid-cols-3 gap-4">
@@ -507,19 +455,28 @@ export default function PropertyOverview({
                 <label htmlFor="property-city" className="text-sm font-medium">
                   City
                 </label>
-                <Input id="property-city" defaultValue={property.city} />
+                <Input
+                  id="property-city"
+                  defaultValue={property.address?.city || ""}
+                />
               </div>
               <div className="space-y-2">
                 <label htmlFor="property-state" className="text-sm font-medium">
                   State
                 </label>
-                <Input id="property-state" defaultValue={property.state} />
+                <Input
+                  id="property-state"
+                  defaultValue={property.address?.state || ""}
+                />
               </div>
               <div className="space-y-2">
                 <label htmlFor="property-zip" className="text-sm font-medium">
                   ZIP
                 </label>
-                <Input id="property-zip" defaultValue={property.zip} />
+                <Input
+                  id="property-zip"
+                  defaultValue={property.address?.zip_code || ""}
+                />
               </div>
             </div>
 
@@ -531,7 +488,7 @@ export default function PropertyOverview({
                 <select
                   id="property-type"
                   className="w-full p-2 border rounded-md"
-                  defaultValue={property.type}
+                  defaultValue={propertyType}
                 >
                   <option value="apartment">Apartment</option>
                   <option value="house">House</option>
@@ -550,7 +507,7 @@ export default function PropertyOverview({
                 <select
                   id="property-status"
                   className="w-full p-2 border rounded-md"
-                  defaultValue={property.status}
+                  defaultValue={status}
                 >
                   <option value="occupied">Occupied</option>
                   <option value="vacant">Vacant</option>
@@ -571,7 +528,7 @@ export default function PropertyOverview({
                 <Input
                   id="property-bedrooms"
                   type="number"
-                  defaultValue={property.bedrooms}
+                  defaultValue={bedrooms}
                 />
               </div>
               <div className="space-y-2">
@@ -585,18 +542,14 @@ export default function PropertyOverview({
                   id="property-bathrooms"
                   type="number"
                   step="0.5"
-                  defaultValue={property.bathrooms}
+                  defaultValue={bathrooms}
                 />
               </div>
               <div className="space-y-2">
                 <label htmlFor="property-sqft" className="text-sm font-medium">
-                  Square Feet
+                  Size
                 </label>
-                <Input
-                  id="property-sqft"
-                  type="number"
-                  defaultValue={property.square_feet}
-                />
+                <Input id="property-sqft" type="number" defaultValue={size} />
               </div>
             </div>
 
@@ -608,7 +561,7 @@ export default function PropertyOverview({
                 <Input
                   id="property-year"
                   type="number"
-                  defaultValue={property.year_built}
+                  defaultValue={yearBuilt}
                 />
               </div>
               <div className="space-y-2">
@@ -621,7 +574,7 @@ export default function PropertyOverview({
                 <Input
                   id="property-parking"
                   type="number"
-                  defaultValue={property.parking_spaces || 0}
+                  defaultValue={parkingSpaces || 0}
                 />
               </div>
             </div>
@@ -644,7 +597,14 @@ export default function PropertyOverview({
             <Button variant="outline" onClick={() => setShowEditDialog(false)}>
               Cancel
             </Button>
-            <Button>Update Property</Button>
+            <Button
+              onClick={() => {
+                refreshProperty();
+                setShowEditDialog(false);
+              }}
+            >
+              Update Property
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -656,7 +616,7 @@ export default function PropertyOverview({
             <DialogTitle>Property Photos</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 py-4">
-            {property.photos.map((photo, index) => (
+            {stockPhotos.map((photo, index) => (
               <div
                 key={index}
                 className="relative aspect-square cursor-pointer overflow-hidden rounded-lg border border-gray-200"
