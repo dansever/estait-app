@@ -195,7 +195,7 @@ export default function PropertiesPage() {
   }, [user]);
 
   const handleAddProperty = () => {
-    router.push("/app/properties/new");
+    router.push("/app/properties/add");
   };
 
   useEffect(() => {
