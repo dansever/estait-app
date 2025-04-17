@@ -15,7 +15,6 @@ import {
   CheckCheck,
   LayoutList,
   User,
-  Clock3,
   Clock10,
   MoreVertical,
   Pencil,
@@ -57,7 +56,7 @@ interface MaintenanceTask {
   assigned_to: {
     id: string;
     name: string;
-    avatar_url?: string;
+    avatar_url?: string | null;
   } | null;
 }
 
@@ -81,7 +80,7 @@ export default function PropertyMaintenance({
         setLoadingTasks(true);
 
         const supabase = await createSPASassClient();
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("maintenance_tasks")
           .select(
             `
