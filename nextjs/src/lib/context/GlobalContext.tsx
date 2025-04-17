@@ -1,66 +1,77 @@
-// src/lib/context/GlobalContext.tsx
-'use client';
+/**
+ * File: GlobalContext.tsx
+ *
+ * Responsibility:
+ * Provides global state management and context for the application
+ *
+ * Key features:
+ * - Manages authentication state using useAuth hook
+ * - Provides loading state for the application
+ * - Creates a central context for global application state
+ *
+ * Components:
+ * - GlobalProvider: Provider component that wraps the application and supplies context
+ * - useGlobal: Hook to access the global context from any component
+ */
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createSPASassClient } from '@/lib/supabase/client';
+"use client";
 
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "@/hooks/use-auth";
+import { useTheme } from "@/hooks/use-theme";
 
-type User = {
+interface GlobalContextType {
+  loading: boolean;
+  user: {
     email: string;
     id: string;
     registered_at: Date;
-};
-
-interface GlobalContextType {
-    loading: boolean;
-    user: User | null;  // Add this
+  } | null;
+  theme: "light" | "dark" | "system";
+  resolvedTheme: "light" | "dark";
+  setTheme: (theme: "light" | "dark" | "system") => void;
+  toggleTheme: () => void;
 }
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export function GlobalProvider({ children }: { children: React.ReactNode }) {
-    const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<User | null>(null);  // Add this
+  // Use the auth hook for authentication state
+  const { user, loading: authLoading } = useAuth();
 
-    useEffect(() => {
-        async function loadData() {
-            try {
-                const supabase = await createSPASassClient();
-                const client = supabase.getSupabaseClient();
+  // Use the theme hook for theme state
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
 
-                // Get user data
-                const { data: { user } } = await client.auth.getUser();
-                if (user) {
-                    setUser({
-                        email: user.email!,
-                        id: user.id,
-                        registered_at: new Date(user.created_at)
-                    });
-                } else {
-                    throw new Error('User not found');
-                }
+  // Combine loading states from different sources
+  const [loading, setLoading] = useState(true);
 
-            } catch (error) {
-                console.error('Error loading data:', error);
-            } finally {
-                setLoading(false);
-            }
-        }
+  // Update loading state when auth state changes
+  useEffect(() => {
+    if (!authLoading) {
+      setLoading(false);
+    }
+  }, [authLoading]);
 
-        loadData();
-    }, []);
-
-    return (
-        <GlobalContext.Provider value={{ loading, user }}>
-            {children}
-        </GlobalContext.Provider>
-    );
+  return (
+    <GlobalContext.Provider
+      value={{
+        loading,
+        user,
+        theme,
+        resolvedTheme,
+        setTheme,
+        toggleTheme,
+      }}
+    >
+      {children}
+    </GlobalContext.Provider>
+  );
 }
 
 export const useGlobal = () => {
-    const context = useContext(GlobalContext);
-    if (context === undefined) {
-        throw new Error('useGlobal must be used within a GlobalProvider');
-    }
-    return context;
+  const context = useContext(GlobalContext);
+  if (context === undefined) {
+    throw new Error("useGlobal must be used within a GlobalProvider");
+  }
+  return context;
 };

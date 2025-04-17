@@ -10,15 +10,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getCurrencySymbol } from "@/components/property/lease/lease-utils";
 import { useRouter } from "next/navigation";
 import { Home } from "lucide-react";
+import StatusBadge from "@/components/property/lease/StatusBadge";
+import { formatPaymentFrequency } from "@/lib/utils/formatters";
 
 // Define an enum for property status for better type safety
 export enum PropertyStatus {
@@ -28,13 +30,15 @@ export enum PropertyStatus {
   LISTED = "listed",
 }
 
-interface PropertyCardProps {
+export interface PropertyCardProps {
   id: string;
   image: string;
   title: string;
   address: string;
-  status: PropertyStatus | "vacant" | "rented"; // Support both enum and string for backwards compatibility
+  status: PropertyStatus;
   rentalPrice: number;
+  currency: string;
+  payment_frequency: string;
 }
 
 export default function PropertyCard({
@@ -44,6 +48,8 @@ export default function PropertyCard({
   address,
   status,
   rentalPrice,
+  currency,
+  payment_frequency,
 }: PropertyCardProps) {
   const router = useRouter();
   const [imgError, setImgError] = useState(false);
@@ -64,12 +70,14 @@ export default function PropertyCard({
       {/* Image with error handling */}
       <div className="relative h-48 w-full overflow-hidden rounded-t-md bg-gray-100">
         {!imgError ? (
-          <img
+          <Image
             src={image}
             alt={title}
-            className="h-full w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover"
             onError={handleImageError}
-            loading="lazy"
+            priority={false}
           />
         ) : (
           <div className="flex items-center justify-center h-full w-full bg-gray-100">
@@ -101,29 +109,18 @@ export default function PropertyCard({
       {/* Card Content - Fixed height for price */}
       <CardContent>
         <p className="text-lg font-medium text-gray-900">
-          ${rentalPrice} / month
+          {getCurrencySymbol(currency)}
+          {rentalPrice.toLocaleString()}{" "}
+          <span className="text-sm text-gray-500">
+            / {formatPaymentFrequency(payment_frequency)}
+          </span>
         </p>
       </CardContent>
 
       {/* Card Footer with Status Badge positioned at bottom */}
       <CardFooter className="relative border-t pt-3 flex items-center justify-between">
         <p className="text-sm text-gray-500">Tap to view details</p>
-        {status === PropertyStatus.VACANT || status === "vacant" ? (
-          <Badge
-            variant="outline"
-            className="border-yellow-500 text-yellow-600"
-          >
-            Vacant
-          </Badge>
-        ) : status === PropertyStatus.OCCUPIED || status === "rented" ? (
-          <Badge className="bg-green-600">Occupied</Badge>
-        ) : status === PropertyStatus.MAINTENANCE ? (
-          <Badge className="bg-orange-600">Maintenance</Badge>
-        ) : status === PropertyStatus.LISTED ? (
-          <Badge className="bg-blue-600">Listed</Badge>
-        ) : (
-          <Badge>Unknown</Badge>
-        )}
+        <StatusBadge status={status} />
       </CardFooter>
     </Card>
   );

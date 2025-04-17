@@ -2,10 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Image from "next/image";
 import { NavTabs, TabItem } from "@/components/layout/navTabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft,
@@ -27,6 +27,7 @@ import PropertyMaintenance from "./sections/maintenance";
 // Import utilities for currency formatting
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";
+import StatusBadge from "@/components/property/lease/StatusBadge";
 
 export default function PropertyDetailsPage() {
   const router = useRouter();
@@ -156,23 +157,7 @@ export default function PropertyDetailsPage() {
               </p>
 
               <div className="flex flex-wrap items-center gap-3 mt-4">
-                {/* Status Badge */}
-                {getPropertyStatus() === "vacant" ? (
-                  <Badge
-                    variant="outline"
-                    className="border-yellow-500 text-yellow-600"
-                  >
-                    Vacant
-                  </Badge>
-                ) : getPropertyStatus() === "occupied" ? (
-                  <Badge className="bg-green-600">Occupied</Badge>
-                ) : getPropertyStatus() === "maintenance" ? (
-                  <Badge className="bg-orange-600">Maintenance</Badge>
-                ) : getPropertyStatus() === "listed" ? (
-                  <Badge className="bg-blue-600">Listed</Badge>
-                ) : (
-                  <Badge>Unknown</Badge>
-                )}
+                <StatusBadge status={getPropertyStatus()} />
 
                 {property?.current_lease?.tenant && (
                   <div className="flex items-center gap-2">
@@ -198,14 +183,16 @@ export default function PropertyDetailsPage() {
                 )}
               </div>
             </div>
-
             {/* Right side - Property image */}
             {propertyImage && (
-              <div className="md:w-1/3 w-full mb-4 md:mb-0">
-                <img
+              <div className="md:w-1/3 w-full mb-4 md:mb-0 relative h-48">
+                <Image
                   src={propertyImage}
                   alt="Property"
-                  className="w-full h-48 object-cover rounded-lg"
+                  fill
+                  className="object-cover rounded-lg"
+                  sizes="(max-width: 768px) 100vw, 33vw"
+                  priority
                 />
               </div>
             )}

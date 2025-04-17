@@ -1,4 +1,19 @@
-import { useState, useEffect } from "react";
+/**
+ * File: use-property-details.tsx
+ *
+ * Responsibility:
+ * Custom hook for fetching and managing detailed property information
+ *
+ * Key features:
+ * - Fetches property data along with related address, lease, and tenant information
+ * - Provides helper functions for formatting addresses and determining property status
+ * - Calculates financial metrics for property performance analysis
+ *
+ * Components:
+ * - usePropertyDetails: Hook that loads property details and provides access to property data and utility functions
+ */
+
+import { useState, useEffect, useCallback } from "react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { getPropertyById } from "@/lib/supabase/queries/properties";
 import { Database } from "@/lib/types";
@@ -31,15 +46,29 @@ export type PropertyWithDetails =
         phone: string | null;
       } | null;
     } | null;
+    lease_history?: Array<{
+      id: string;
+      lease_start: string | null;
+      lease_end: string | null;
+      rent_amount: number | null;
+      status: string | null;
+    }>;
   };
 
 interface UsePropertyDetailsReturn {
   property: PropertyWithDetails | null;
   isLoading: boolean;
   error: string | null;
-  refreshProperty: () => Promise<void>;
+  refreshProperty: (timestamp?: number) => Promise<void>;
   getFormattedAddress: (address: PropertyWithDetails["address"]) => string;
   getPropertyStatus: () => "vacant" | "occupied" | "maintenance" | "listed";
+  getLeaseStatus: () => "active" | "expired" | "upcoming" | "none";
+  calculateFinancials: () => {
+    monthlyIncome: number;
+    monthlyExpenses: number;
+    cashFlow: number;
+    roi: number;
+  };
 }
 
 export function usePropertyDetails(
@@ -87,8 +116,48 @@ export function usePropertyDetails(
     return "vacant";
   };
 
+  // Helper function to determine lease status
+  const getLeaseStatus = (): "active" | "expired" | "upcoming" | "none" => {
+    if (!property?.current_lease) return "none";
+
+    const now = new Date();
+    const leaseStart = property.current_lease.lease_start
+      ? new Date(property.current_lease.lease_start)
+      : null;
+    const leaseEnd = property.current_lease.lease_end
+      ? new Date(property.current_lease.lease_end)
+      : null;
+
+    if (!leaseStart || !leaseEnd) return "none";
+
+    if (now < leaseStart) return "upcoming";
+    if (now > leaseEnd) return "expired";
+    return "active";
+  };
+
+  // Helper function to calculate financial metrics
+  const calculateFinancials = () => {
+    const monthlyIncome = property?.current_lease?.rent_amount || 0;
+    // Estimate monthly expenses (could be replaced with actual data)
+    const monthlyExpenses = 350;
+    const cashFlow = monthlyIncome - monthlyExpenses;
+    const roi =
+      monthlyIncome > 0
+        ? (((monthlyIncome - monthlyExpenses) * 12) /
+            (property?.purchase_price || 1)) *
+          100
+        : 0;
+
+    return {
+      monthlyIncome,
+      monthlyExpenses,
+      cashFlow,
+      roi,
+    };
+  };
+
   // Fetch property data with related details
-  const fetchPropertyDetails = async () => {
+  const fetchPropertyDetails = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
@@ -100,58 +169,98 @@ export function usePropertyDetails(
         return;
       }
 
+      // Validate property data
+      if (typeof propertyData !== "object") {
+        setError("Invalid property data received");
+        return;
+      }
+
       // Fetch related data
       const supabase = await createSPASassClient();
 
       // Get address
       let address = null;
       if (propertyData.address_id) {
-        const { data: addressData } = await supabase
+        const { data: addressData, error: addressError } = await supabase
           .from("addresses")
           .select("*")
           .eq("id", propertyData.address_id)
           .single();
-        address = addressData;
+
+        if (addressError) {
+          console.error("Error fetching address:", addressError);
+        } else {
+          address = addressData;
+        }
       }
 
-      // Get current lease and tenant with ALL fields
+      // Get current lease using separate queries instead of nested query
       let lease = null;
       const currentDate = new Date().toISOString();
-      const { data: leaseData } = await supabase
+
+      // First fetch the lease - making sure to get active leases by checking
+      // that start date is in the past and end date is in the future
+      const { data: leaseData, error: leaseError } = await supabase
         .from("leases")
-        .select(
-          `
-          id,
-          lease_start,
-          lease_end,
-          rent_amount,
-          security_deposit,
-          payment_due_day,
-          payment_frequency,
-          currency,
-          status,
-          tenant_id,
-          tenant:tenant_id (
-            id,
-            first_name,
-            last_name,
-            email,
-            phone
-          )
-        `
-        )
+        .select("*")
         .eq("property_id", propertyId)
         .lte("lease_start", currentDate)
         .gte("lease_end", currentDate)
         .order("lease_start", { ascending: false })
-        .limit(1)
-        .single();
+        .limit(1);
 
-      if (leaseData) {
+      // Log leases for debugging
+      console.log("Lease query results:", {
+        propertyId,
+        currentDate,
+        leaseData,
+        leaseError,
+      });
+
+      if (leaseError) {
+        console.error("Error fetching current lease:", leaseError);
+      }
+
+      // Check if we have lease data and it's an array with at least one item
+      const currentLease =
+        leaseData && leaseData.length > 0 ? leaseData[0] : null;
+
+      // If we have a lease, fetch the tenant separately
+      if (currentLease && currentLease.tenant_id) {
+        const { data: tenantData, error: tenantError } = await supabase
+          .from("tenants")
+          .select("*")
+          .eq("id", currentLease.tenant_id)
+          .single();
+
+        if (tenantError) {
+          console.error("Error fetching tenant:", tenantError);
+        } else {
+          // Combine lease and tenant data
+          lease = {
+            ...currentLease,
+            payment_due_day: currentLease.payment_due_day ?? null,
+            tenant: tenantData,
+          };
+        }
+      } else if (currentLease) {
         lease = {
-          ...leaseData,
-          payment_due_day: leaseData.payment_due_day ?? null,
+          ...currentLease,
+          payment_due_day: currentLease.payment_due_day ?? null,
+          tenant: null,
         };
+      }
+
+      // Get lease history
+      const { data: leaseHistoryData, error: historyError } = await supabase
+        .from("leases")
+        .select("id, lease_start, lease_end, rent_amount, status")
+        .eq("property_id", propertyId)
+        .order("lease_start", { ascending: false })
+        .limit(5);
+
+      if (historyError) {
+        console.error("Error fetching lease history:", historyError);
       }
 
       // Combine all data
@@ -159,6 +268,7 @@ export function usePropertyDetails(
         ...propertyData,
         address,
         current_lease: lease,
+        lease_history: leaseHistoryData || [],
       };
 
       setProperty(propertyWithDetails);
@@ -168,13 +278,17 @@ export function usePropertyDetails(
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [propertyId]);
 
   useEffect(() => {
     if (propertyId) {
       fetchPropertyDetails();
     }
-  }, [propertyId]);
+
+    // Set up a refresh interval for time-sensitive data (optional)
+    // const refreshInterval = setInterval(() => fetchPropertyDetails(), 5 * 60 * 1000);
+    // return () => clearInterval(refreshInterval);
+  }, [propertyId, fetchPropertyDetails]);
 
   return {
     property,
@@ -183,5 +297,7 @@ export function usePropertyDetails(
     refreshProperty: fetchPropertyDetails,
     getFormattedAddress,
     getPropertyStatus,
+    getLeaseStatus,
+    calculateFinancials,
   };
 }

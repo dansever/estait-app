@@ -7,11 +7,12 @@ import { AlertCircle, Plus } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import PropertyCard, {
   PropertyStatus,
+  PropertyCardProps,
 } from "@/components/property/property-card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";
-import { Database } from "@/lib/types";
+import { PropertyWithDetails } from "@/hooks/use-property-details";
 import FileManager from "@/components/FileManager";
 
 // Stock photos for placeholders
@@ -22,35 +23,10 @@ const STOCK_PHOTOS = [
   "/stock_photos/apartment_4.jpg",
 ];
 
-type PropertyWithDetails = Database["public"]["Tables"]["properties"]["Row"] & {
-  address?: {
-    street: string | null;
-    apartment_number: string | null;
-    city: string | null;
-    state: string | null;
-    zip_code: string | null;
-  } | null;
-  current_lease?: {
-    rent_amount: number | null;
-    status: string | null;
-  } | null;
-  image_url?: string | null;
-};
-
-// Interface for the PropertyCard component
-interface PropertyCardData {
-  id: string;
-  image: string;
-  title: string;
-  address: string;
-  status: PropertyStatus;
-  rentalPrice: number;
-}
-
 export default function PropertiesPage() {
   const { user } = useGlobal();
   const router = useRouter();
-  const [properties, setProperties] = useState<PropertyCardData[]>([]);
+  const [properties, setProperties] = useState<PropertyCardProps[]>([]);
   const [propertiesLoading, setPropertiesLoading] = useState(true);
   const [propertiesError, setPropertiesError] = useState("");
 
@@ -59,49 +35,84 @@ export default function PropertiesPage() {
       setPropertiesLoading(true);
       setPropertiesError("");
 
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.error("[loadProperties] User ID is not available");
+        return;
+      }
+
+      console.log(
+        "[loadProperties] Start loading properties for user:",
+        user.id
+      );
 
       // Fetch properties using the query function
       const propertiesData = await getPropertiesByOwner(user.id);
+      console.log("[loadProperties] Properties fetched:", propertiesData);
 
       // Fetch additional details for each property (addresses and leases)
       const supabase = await createSPASassClient();
+      console.log("[loadProperties] Supabase client initialized");
+
       const propertiesWithDetails: PropertyWithDetails[] = await Promise.all(
         propertiesData.map(async (property) => {
-          // Get address if exists
+          console.log(`[loadProperties] Processing property: ${property.id}`);
+
+          // Get address
           let address = null;
           if (property.address_id) {
-            const { data: addressData } = await supabase
+            const { data: addressData, error: addressError } = await supabase
               .from("addresses")
               .select("*")
               .eq("id", property.address_id)
               .single();
+            if (addressError) {
+              console.warn(
+                `[loadProperties] Address fetch error for ${property.id}:`,
+                addressError
+              );
+            }
             address = addressData;
           }
 
           // Get current lease if exists
           let lease = null;
           const currentDate = new Date().toISOString();
-          const { data: leaseData } = await supabase
+          const { data: leaseData, error: leaseError } = await supabase
             .from("leases")
             .select("*")
             .eq("property_id", property.id)
-            .lte("lease_start", currentDate)
-            .gte("lease_end", currentDate)
-            .order("lease_start", { ascending: false })
-            .limit(1)
-            .single();
+            .limit(1);
 
-          if (leaseData) {
-            lease = leaseData;
+          // Debug lease query results
+          console.log(`[loadProperties] Lease query for ${property.id}:`, {
+            currentDate,
+            leaseData,
+            leaseErrorCode: leaseError?.code,
+            leaseErrorMessage: leaseError?.message,
+          });
+
+          if (leaseError) {
+            console.warn(
+              `[loadProperties] Lease fetch error for ${property.id}:`,
+              leaseError
+            );
           }
 
-          // Get property image if exists
-          const { data: documents } = await supabase
+          // If leaseData is an array with at least one element, use the first one
+          lease = leaseData && leaseData.length > 0 ? leaseData[0] : null;
+
+          // Get property image
+          const { data: documents, error: docError } = await supabase
             .from("documents")
             .select("*")
             .eq("property_id", property.id)
             .limit(1);
+          if (docError) {
+            console.warn(
+              `[loadProperties] Document fetch error for ${property.id}:`,
+              docError
+            );
+          }
 
           const image_url =
             documents && documents.length > 0 ? documents[0].file_url : null;
@@ -115,9 +126,14 @@ export default function PropertiesPage() {
         })
       );
 
+      console.log(
+        "[loadProperties] Properties with details:",
+        propertiesWithDetails
+      );
+
       // Transform data to match PropertyCard props
-      const formattedProperties: PropertyCardData[] = propertiesWithDetails.map(
-        (property, index) => {
+      const formattedProperties: PropertyCardProps[] =
+        propertiesWithDetails.map((property, index) => {
           // Format address string
           const addressParts = [];
           if (property.address?.street)
@@ -137,8 +153,15 @@ export default function PropertiesPage() {
             ? PropertyStatus.OCCUPIED
             : PropertyStatus.VACANT;
 
+          console.log(
+            "[loadProperties] current_lease:",
+            property.current_lease
+          );
           // Get rental price from current lease or default to 0
           const rentalPrice = property.current_lease?.rent_amount || 0;
+          const currency = property.current_lease?.currency || "USD";
+          const payment_frequency =
+            property.current_lease?.payment_frequency || "monthly";
 
           // Use stock photos as placeholders for image
           const stockPhotoIndex = index % STOCK_PHOTOS.length;
@@ -151,14 +174,21 @@ export default function PropertiesPage() {
             address: addressString || "Address not available",
             status,
             rentalPrice,
+            currency,
+            payment_frequency,
           };
-        }
+        });
+
+      // After formatting
+      console.log(
+        "[loadProperties] Formatted properties for UI:",
+        formattedProperties
       );
 
       setProperties(formattedProperties);
     } catch (err) {
       setPropertiesError("Failed to load properties");
-      console.error("Error loading properties:", err);
+      console.error("[loadProperties] General error loading properties:", err);
     } finally {
       setPropertiesLoading(false);
     }
@@ -169,9 +199,9 @@ export default function PropertiesPage() {
   };
 
   useEffect(() => {
+    console.log("[PropertiesPage] useEffect - user ID:", user?.id);
     if (user?.id) {
       loadProperties();
-      setPropertiesLoading(false);
     }
   }, [user, loadProperties]);
 
@@ -221,6 +251,8 @@ export default function PropertiesPage() {
                 address={property.address}
                 status={property.status}
                 rentalPrice={property.rentalPrice}
+                currency={property.currency}
+                payment_frequency={property.payment_frequency}
               />
             ))}
           </div>
