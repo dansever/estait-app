@@ -476,9 +476,9 @@ export type Database = {
       DOCUMENT_TYPE:
         | "lease_agreement"
         | "id_verification"
-        | "insurance_certificate"
+        | "insurance"
         | "payment_receipt"
-        | "maintenance_report"
+        | "maintenance"
         | "property_photo"
         | "utility_bill"
         | "tax_document"
@@ -508,6 +508,7 @@ export type Database = {
         | "insurance"
         | "management_fee"
         | "deposit"
+        | "legal"
         | "other";
       TRANSACTION_TYPE: "expense" | "income";
       USER_PLAN: "starter" | "pro" | "scale";
@@ -629,9 +630,9 @@ export const Constants = {
       DOCUMENT_TYPE: [
         "lease_agreement",
         "id_verification",
-        "insurance_certificate",
+        "insurance",
         "payment_receipt",
-        "maintenance_report",
+        "maintenance",
         "property_photo",
         "utility_bill",
         "tax_document",
@@ -664,6 +665,7 @@ export const Constants = {
         "insurance",
         "management_fee",
         "deposit",
+        "legal",
         "other",
       ],
       TRANSACTION_TYPE: ["expense", "income"],

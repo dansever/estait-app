@@ -465,7 +465,7 @@ export default function AddLeaseDialog({
                 }
                 className="w-full p-2 border rounded-md bg-white"
               >
-                {Constants.public.Enums.payment_frequency.map((freq) => (
+                {Constants.public.Enums.PAYMENT_FREQUENCY.map((freq) => (
                   <option key={freq} value={freq}>
                     {freq.charAt(0).toUpperCase() + freq.slice(1)}
                   </option>

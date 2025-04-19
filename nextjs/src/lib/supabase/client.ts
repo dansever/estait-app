@@ -16,7 +16,6 @@ export function createSPAClient() {
       "Supabase URL and Anon Key must be defined in environment variables."
     );
   }
-  // Create and return the Supabase client for the browser
   return createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
 }
 
@@ -29,6 +28,21 @@ export function createSPAClient() {
  */
 export async function createSPASassClient() {
   const client = createSPAClient();
+
+  // Get the current session to ensure we're authenticated
+  const {
+    data: { session },
+  } = await client.auth.getSession();
+
+  // If there's no session and we're in a browser, redirect to login
+  if (!session && typeof window !== "undefined") {
+    console.warn(
+      "No active session found. Authentication required for storage operations."
+    );
+    // Optional: Redirect to login
+    // window.location.href = '/auth/login';
+  }
+
   // Return a new instance of SassClient, passing the Supabase client and specifying the client type
   return new SassClient(client, ClientType.SPA);
 }

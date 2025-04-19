@@ -49,176 +49,156 @@ export class SassClient {
   }
 
   // Storage helpers
-  async uploadFile(
-    userId: string,
-    propertyId: string,
-    filename: string,
-    file: File,
-    documentType?: string
-  ) {
-    const safeFilename = filename.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
-    const path = `${userId}/${propertyId}/${safeFilename}`;
-
-    // Upload file to storage
-    const uploadResult = await this.client.storage
-      .from("files")
-      .upload(path, file);
-
-    // If upload was successful and document type is provided, store file metadata
-    if (!uploadResult.error && documentType) {
-      // Get the public URL for the file
-      const {
-        data: { publicUrl },
-      } = this.client.storage.from("files").getPublicUrl(path);
-
-      // Create a record in the documents table
-      await this.client.from("documents").insert({
-        file_name: safeFilename,
-        file_url: publicUrl,
-        document_type: documentType,
-        uploaded_by: userId,
-        property_id: propertyId,
-        mime_type: file.type,
-        "file_size(mb)": +(file.size / (1024 * 1024)).toFixed(2),
-      });
+  async uploadFile(userID: string, propertyId: string, file: File) {
+    if (!userID || !propertyId) {
+      throw new Error(
+        "User ID and Property ID are required for file operations"
+      );
     }
 
-    return uploadResult;
+    // Verify authentication
+    const {
+      data: { session },
+    } = await this.client.auth.getSession();
+    if (!session) {
+      throw new Error("Authentication required for file operations");
+    }
+
+    // Ensure userID is the authenticated user's ID to match RLS policy
+    const authenticatedUserId = session.user.id;
+    if (userID !== authenticatedUserId) {
+      console.warn(
+        "Adjusting userID to match authenticated user for RLS policy compliance"
+      );
+      userID = authenticatedUserId;
+    }
+
+    const safeFilename = file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
+    // Format path to match RLS policy pattern: must start with auth.uid
+    const path = `${userID}/${propertyId}/${safeFilename}`;
+
+    try {
+      console.log(`Uploading file to path: ${path}`);
+      return this.client.storage.from("files").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      throw error;
+    }
   }
 
   async getFiles(userId: string, propertyId: string) {
-    return this.client.storage.from("files").list(`${userId}/${propertyId}`);
-  }
-
-  async deleteFile(userId: string, propertyId: string, filename: string) {
-    // Extract just the filename part without the folder path
-    const baseFilename = filename.split("/").pop() || filename;
-    const path = `${userId}/${propertyId}/${baseFilename}`;
-
-    // Delete the document record if it exists
-    if (baseFilename) {
-      await this.client
-        .from("documents")
-        .delete()
-        .eq("file_name", baseFilename)
-        .eq("uploaded_by", userId)
-        .eq("property_id", propertyId);
+    if (!userId || !propertyId) {
+      throw new Error(
+        "User ID and Property ID are required for file operations"
+      );
     }
 
-    // Then delete the file from storage
-    return this.client.storage.from("files").remove([path]);
+    // Verify authentication and ensure userId matches authenticated user
+    const {
+      data: { session },
+    } = await this.client.auth.getSession();
+    if (!session) {
+      throw new Error("Authentication required for file operations");
+    }
+
+    // Ensure userId is the authenticated user's ID to match RLS policy
+    const authenticatedUserId = session.user.id;
+    if (userId !== authenticatedUserId) {
+      console.warn(
+        "Adjusting userId to match authenticated user for RLS policy compliance"
+      );
+      userId = authenticatedUserId;
+    }
+
+    const path = `${userId}/${propertyId}`;
+    try {
+      return this.client.storage.from("files").list(path);
+    } catch (error) {
+      console.error("List files error:", error);
+      throw error;
+    }
   }
 
-  async renameFile(
-    userId: string,
+  async deleteFile(
+    userID: string,
     propertyId: string,
-    oldFilePath: string,
-    newFileName: string,
-    documentType: string
+    filenameToDelete: string
   ) {
+    if (!userID || !propertyId) {
+      throw new Error(
+        "User ID and Property ID are required for file operations"
+      );
+    }
+
+    // Verify authentication and ensure userID matches authenticated user
+    const {
+      data: { session },
+    } = await this.client.auth.getSession();
+    if (!session) {
+      throw new Error("Authentication required for file operations");
+    }
+
+    // Ensure userID is the authenticated user's ID to match RLS policy
+    const authenticatedUserId = session.user.id;
+    if (userID !== authenticatedUserId) {
+      console.warn(
+        "Adjusting userID to match authenticated user for RLS policy compliance"
+      );
+      userID = authenticatedUserId;
+    }
+
+    const path = `${userID}/${propertyId}/${filenameToDelete}`;
     try {
-      // Extract just the filename part without the folder path
-      const oldBaseName = oldFilePath.split("/").pop() || oldFilePath;
-      const fullOldPath = `${userId}/${propertyId}/${oldBaseName}`;
-      const fullNewPath = `${userId}/${propertyId}/${newFileName}`;
-
-      // 1. First download the old file
-      const { data: fileData, error: downloadError } = await this.client.storage
-        .from("files")
-        .download(fullOldPath);
-
-      if (downloadError) throw downloadError;
-      if (!fileData) throw new Error("Could not download file");
-
-      // Convert Blob to File with the new name
-      const file = new File([fileData], newFileName, {
-        type: fileData.type,
-      });
-
-      // 2. Upload the file with new name
-      const { error: uploadError } = await this.client.storage
-        .from("files")
-        .upload(fullNewPath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      // 3. Delete the old file
-      const { error: deleteError } = await this.client.storage
-        .from("files")
-        .remove([fullOldPath]);
-
-      if (deleteError) throw deleteError;
-
-      // 4. Update or create document record in the database
-      if (oldBaseName) {
-        // Get public URL for the new file
-        const {
-          data: { publicUrl },
-        } = this.client.storage.from("files").getPublicUrl(fullNewPath);
-
-        // Check if there's a document record for the old file
-        const { data: existingDocs, error: queryError } = await this.client
-          .from("documents")
-          .select()
-          .eq("file_name", oldBaseName)
-          .eq("uploaded_by", userId)
-          .eq("property_id", propertyId);
-
-        if (queryError) throw queryError;
-
-        if (existingDocs && existingDocs.length > 0) {
-          // Update existing document record
-          const { error: updateError } = await this.client
-            .from("documents")
-            .update({
-              file_name: newFileName,
-              file_url: publicUrl,
-              document_type: documentType,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("file_name", oldBaseName)
-            .eq("uploaded_by", userId)
-            .eq("property_id", propertyId);
-
-          if (updateError) throw updateError;
-        } else {
-          // Create new document record if one doesn't exist
-          const { error: insertError } = await this.client
-            .from("documents")
-            .insert({
-              file_name: newFileName,
-              file_url: publicUrl,
-              document_type: documentType,
-              uploaded_by: userId,
-              property_id: propertyId,
-              mime_type: file.type,
-              "file_size(mb)": +(file.size / (1024 * 1024)).toFixed(2),
-            });
-
-          if (insertError) throw insertError;
-        }
-      }
-
-      return { error: null };
+      return this.client.storage.from("files").remove([path]);
     } catch (error) {
-      console.error("Error renaming file:", error);
-      return { error };
+      console.error("Delete file error:", error);
+      throw error;
     }
   }
 
   async shareFile(
-    userId: string,
+    userID: string,
     propertyId: string,
     filename: string,
     timeInSec: number,
     forDownload = false
   ) {
-    // Extract just the filename part without the folder path
-    const baseFilename = filename.split("/").pop() || filename;
-    const path = `${userId}/${propertyId}/${baseFilename}`;
+    if (!userID || !propertyId) {
+      throw new Error(
+        "User ID and Property ID are required for file operations"
+      );
+    }
 
-    return this.client.storage.from("files").createSignedUrl(path, timeInSec, {
-      download: forDownload,
-    });
+    // Verify authentication and ensure userID matches authenticated user
+    const {
+      data: { session },
+    } = await this.client.auth.getSession();
+    if (!session) {
+      throw new Error("Authentication required for file operations");
+    }
+
+    // Ensure userID is the authenticated user's ID to match RLS policy
+    const authenticatedUserId = session.user.id;
+    if (userID !== authenticatedUserId) {
+      console.warn(
+        "Adjusting userID to match authenticated user for RLS policy compliance"
+      );
+      userID = authenticatedUserId;
+    }
+
+    const path = `${userID}/${propertyId}/${filename}`;
+    try {
+      return this.client.storage
+        .from("files")
+        .createSignedUrl(path, timeInSec, {
+          download: forDownload,
+        });
+    } catch (error) {
+      console.error("Share file error:", error);
+      throw error;
+    }
   }
 }
