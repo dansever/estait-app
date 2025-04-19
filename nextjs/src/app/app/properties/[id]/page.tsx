@@ -17,6 +17,13 @@ import {
   MapPin,
 } from "lucide-react";
 
+// Import section components
+import DocumentsSection from "./sections/documents";
+import FinancialsSection from "./sections/financials";
+import LeaseSection from "./sections/lease";
+import MaintenanceSection from "./sections/maintenance";
+import OverviewSection from "./sections/overview";
+
 // Import utilities for currency formatting
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";

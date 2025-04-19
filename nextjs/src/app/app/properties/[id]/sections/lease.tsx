@@ -7,9 +7,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import AddLeaseDialog from "@/components/property/lease/AddLeaseDialog";
 import EditLeaseDialog from "@/components/property/lease/EditLeaseDialog";
+<<<<<<< HEAD
 import LeaseHistoryCard from "@/components/property/lease/LeaseHistoryCard";
+=======
+>>>>>>> ab90fd1c9dd9891c4eb20fa309a08656b4c85883
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";
+import {
+  getOrdinalSuffix,
+  calculateNextPaymentDate,
+  formatDate,
+  getRemainingTime,
+} from "@/lib/utils/formatters";
 import {
   Users,
   CalendarClock,
@@ -17,21 +26,11 @@ import {
   Clock,
   Calendar,
   CreditCard,
-  Info,
   Plus,
   ClipboardEdit,
   HelpCircle,
   Building2,
-  HomeIcon,
 } from "lucide-react";
-import Link from "next/link";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Database } from "@/lib/types";
 
 export default function LeaseSection({
   propertyId,
@@ -48,35 +47,6 @@ export default function LeaseSection({
 
   // Get the current lease from the property
   const lease = property?.current_lease || null;
-
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  // Helper function to calculate remaining time in lease
-  const getRemainingTime = (endDate: string | null) => {
-    if (!endDate) return null;
-
-    const end = new Date(endDate);
-    const now = new Date();
-    const diffTime = end.getTime() - now.getTime();
-
-    if (diffTime <= 0) return "Expired";
-
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays > 30) {
-      const months = Math.floor(diffDays / 30);
-      return `${months} month${months !== 1 ? "s" : ""}`;
-    }
-
-    return `${diffDays} day${diffDays !== 1 ? "s" : ""}`;
-  };
 
   // Loading state
   if (isLoading) {
@@ -409,45 +379,4 @@ export default function LeaseSection({
       )}
     </div>
   );
-}
-
-// Helper functions
-function getOrdinalSuffix(day: number): string {
-  if (day > 3 && day < 21) return "th";
-  switch (day % 10) {
-    case 1:
-      return "st";
-    case 2:
-      return "nd";
-    case 3:
-      return "rd";
-    default:
-      return "th";
-  }
-}
-
-function calculateNextPaymentDate(lease: any): string {
-  if (!lease.payment_due_day) return "Not scheduled";
-  if (!lease.lease_end) return "Not scheduled";
-
-  const now = new Date();
-  const endDate = new Date(lease.lease_end);
-
-  // If lease has ended, no more payments
-  if (now > endDate) return "No more payments due";
-
-  const dueDay = lease.payment_due_day;
-  let nextPayment = new Date(now.getFullYear(), now.getMonth(), dueDay);
-
-  // If due day has passed this month, move to next month
-  if (now.getDate() > dueDay) {
-    nextPayment = new Date(now.getFullYear(), now.getMonth() + 1, dueDay);
-  }
-
-  // Format the date
-  return nextPayment.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
