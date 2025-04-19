@@ -54,9 +54,9 @@ export type Database = {
       documents: {
         Row: {
           created_at: string;
-          document_type: Database["public"]["Enums"]["document_type"] | null;
+          document_type: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null;
           file_name: string;
-          "file_size(mb)": number | null;
+          file_size_kb: number | null;
           file_url: string;
           id: string;
           lease_id: string | null;
@@ -68,9 +68,9 @@ export type Database = {
         };
         Insert: {
           created_at?: string;
-          document_type?: Database["public"]["Enums"]["document_type"] | null;
+          document_type?: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null;
           file_name: string;
-          "file_size(mb)"?: number | null;
+          file_size_kb?: number | null;
           file_url: string;
           id?: string;
           lease_id?: string | null;
@@ -82,9 +82,9 @@ export type Database = {
         };
         Update: {
           created_at?: string;
-          document_type?: Database["public"]["Enums"]["document_type"] | null;
+          document_type?: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null;
           file_name?: string;
-          "file_size(mb)"?: number | null;
+          file_size_kb?: number | null;
           file_url?: string;
           id?: string;
           lease_id?: string | null;
@@ -135,7 +135,7 @@ export type Database = {
           notes: string | null;
           payment_due_day: number | null;
           payment_frequency:
-            | Database["public"]["Enums"]["payment_frequency"]
+            | Database["public"]["Enums"]["PAYMENT_FREQUENCY"]
             | null;
           property_id: string | null;
           rent_amount: number;
@@ -153,7 +153,7 @@ export type Database = {
           notes?: string | null;
           payment_due_day?: number | null;
           payment_frequency?:
-            | Database["public"]["Enums"]["payment_frequency"]
+            | Database["public"]["Enums"]["PAYMENT_FREQUENCY"]
             | null;
           property_id?: string | null;
           rent_amount?: number;
@@ -171,7 +171,7 @@ export type Database = {
           notes?: string | null;
           payment_due_day?: number | null;
           payment_frequency?:
-            | Database["public"]["Enums"]["payment_frequency"]
+            | Database["public"]["Enums"]["PAYMENT_FREQUENCY"]
             | null;
           property_id?: string | null;
           rent_amount?: number;
@@ -203,9 +203,9 @@ export type Database = {
           description: string | null;
           due_date: string | null;
           id: string;
-          priority: Database["public"]["Enums"]["priority "] | null;
+          priority: Database["public"]["Enums"]["PRIORITY"] | null;
           property_id: string | null;
-          task_status: Database["public"]["Enums"]["task_status"];
+          task_status: Database["public"]["Enums"]["TASK_STATUS"];
           title: string;
           updated_at: string | null;
         };
@@ -214,9 +214,9 @@ export type Database = {
           description?: string | null;
           due_date?: string | null;
           id?: string;
-          priority?: Database["public"]["Enums"]["priority "] | null;
+          priority?: Database["public"]["Enums"]["PRIORITY"] | null;
           property_id?: string | null;
-          task_status?: Database["public"]["Enums"]["task_status"];
+          task_status?: Database["public"]["Enums"]["TASK_STATUS"];
           title: string;
           updated_at?: string | null;
         };
@@ -225,9 +225,9 @@ export type Database = {
           description?: string | null;
           due_date?: string | null;
           id?: string;
-          priority?: Database["public"]["Enums"]["priority "] | null;
+          priority?: Database["public"]["Enums"]["PRIORITY"] | null;
           property_id?: string | null;
-          task_status?: Database["public"]["Enums"]["task_status"];
+          task_status?: Database["public"]["Enums"]["TASK_STATUS"];
           title?: string;
           updated_at?: string | null;
         };
@@ -256,9 +256,9 @@ export type Database = {
           owner_id: string | null;
           parking_spaces: number;
           property_status:
-            | Database["public"]["Enums"]["property_status"]
+            | Database["public"]["Enums"]["PROPERTY_STATUS"]
             | null;
-          property_type: Database["public"]["Enums"]["property_type"] | null;
+          property_type: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price: number | null;
           size: number | null;
           title: string;
@@ -279,9 +279,9 @@ export type Database = {
           owner_id?: string | null;
           parking_spaces?: number;
           property_status?:
-            | Database["public"]["Enums"]["property_status"]
+            | Database["public"]["Enums"]["PROPERTY_STATUS"]
             | null;
-          property_type?: Database["public"]["Enums"]["property_type"] | null;
+          property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price?: number | null;
           size?: number | null;
           title: string;
@@ -302,9 +302,9 @@ export type Database = {
           owner_id?: string | null;
           parking_spaces?: number;
           property_status?:
-            | Database["public"]["Enums"]["property_status"]
+            | Database["public"]["Enums"]["PROPERTY_STATUS"]
             | null;
-          property_type?: Database["public"]["Enums"]["property_type"] | null;
+          property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price?: number | null;
           size?: number | null;
           title?: string;
@@ -358,7 +358,6 @@ export type Database = {
         };
         Relationships: [];
       };
-
       transactions: {
         Row: {
           amount: number;
@@ -371,7 +370,7 @@ export type Database = {
           receipt_url: string | null;
           transaction_date: string;
           transaction_type:
-            | Database["public"]["Enums"]["transaction_type"]
+            | Database["public"]["Enums"]["TRANSACTION_TYPE"]
             | null;
         };
         Insert: {
@@ -385,7 +384,7 @@ export type Database = {
           receipt_url?: string | null;
           transaction_date?: string;
           transaction_type?:
-            | Database["public"]["Enums"]["transaction_type"]
+            | Database["public"]["Enums"]["TRANSACTION_TYPE"]
             | null;
         };
         Update: {
@@ -399,7 +398,7 @@ export type Database = {
           receipt_url?: string | null;
           transaction_date?: string;
           transaction_type?:
-            | Database["public"]["Enums"]["transaction_type"]
+            | Database["public"]["Enums"]["TRANSACTION_TYPE"]
             | null;
         };
         Relationships: [
@@ -429,7 +428,7 @@ export type Database = {
           onboarding_completed: boolean | null;
           phone: string | null;
           timezone: string | null;
-          user_plan: Database["public"]["Enums"]["user_plan"];
+          user_plan: Database["public"]["Enums"]["USER_PLAN"];
         };
         Insert: {
           company_name?: string | null;
@@ -440,7 +439,7 @@ export type Database = {
           onboarding_completed?: boolean | null;
           phone?: string | null;
           timezone?: string | null;
-          user_plan?: Database["public"]["Enums"]["user_plan"];
+          user_plan?: Database["public"]["Enums"]["USER_PLAN"];
         };
         Update: {
           company_name?: string | null;
@@ -451,7 +450,7 @@ export type Database = {
           onboarding_completed?: boolean | null;
           phone?: string | null;
           timezone?: string | null;
-          user_plan?: Database["public"]["Enums"]["user_plan"];
+          user_plan?: Database["public"]["Enums"]["USER_PLAN"];
         };
         Relationships: [];
       };
@@ -460,13 +459,21 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      delete_property_and_related_data: {
+        Args: { property_id_input: string };
+        Returns: boolean;
+      };
+      insert_document: {
+        Args: { property_id: string; file_name: string };
+        Returns: undefined;
+      };
       update_lease_status: {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
     };
     Enums: {
-      document_type:
+      DOCUMENT_TYPE:
         | "lease_agreement"
         | "id_verification"
         | "insurance_certificate"
@@ -476,15 +483,15 @@ export type Database = {
         | "utility_bill"
         | "tax_document"
         | "other";
-      payment_frequency:
+      PAYMENT_FREQUENCY:
         | "monthly"
         | "weekly"
         | "biweekly"
         | "quarterly"
         | "annually";
-      "priority ": "low" | "medium" | "high";
-      property_status: "occupied" | "vacant" | "maintenance" | "listed";
-      property_type:
+      PRIORITY: "low" | "medium" | "high";
+      PROPERTY_STATUS: "occupied" | "vacant" | "maintenance" | "listed";
+      PROPERTY_TYPE:
         | "apartment"
         | "house"
         | "duplex"
@@ -492,8 +499,8 @@ export type Database = {
         | "commercial"
         | "land"
         | "other";
-      task_status: "open" | "completed";
-      transaction_category:
+      TASK_STATUS: "open" | "completed";
+      TRANSACTION_CATEGORY:
         | "rent"
         | "utilities"
         | "maintenance"
@@ -502,8 +509,8 @@ export type Database = {
         | "management_fee"
         | "deposit"
         | "other";
-      transaction_type: "expense" | "income";
-      user_plan: "starter" | "pro" | "scale";
+      TRANSACTION_TYPE: "expense" | "income";
+      USER_PLAN: "starter" | "pro" | "scale";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -619,7 +626,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      document_type: [
+      DOCUMENT_TYPE: [
         "lease_agreement",
         "id_verification",
         "insurance_certificate",
@@ -630,16 +637,16 @@ export const Constants = {
         "tax_document",
         "other",
       ],
-      payment_frequency: [
+      PAYMENT_FREQUENCY: [
         "monthly",
         "weekly",
         "biweekly",
         "quarterly",
         "annually",
       ],
-      "priority ": ["low", "medium", "high"],
-      property_status: ["occupied", "vacant", "maintenance", "listed"],
-      property_type: [
+      PRIORITY: ["low", "medium", "high"],
+      PROPERTY_STATUS: ["occupied", "vacant", "maintenance", "listed"],
+      PROPERTY_TYPE: [
         "apartment",
         "house",
         "duplex",
@@ -648,8 +655,8 @@ export const Constants = {
         "land",
         "other",
       ],
-      task_status: ["open", "completed"],
-      transaction_category: [
+      TASK_STATUS: ["open", "completed"],
+      TRANSACTION_CATEGORY: [
         "rent",
         "utilities",
         "maintenance",
@@ -659,8 +666,8 @@ export const Constants = {
         "deposit",
         "other",
       ],
-      transaction_type: ["expense", "income"],
-      user_plan: ["starter", "pro", "scale"],
+      TRANSACTION_TYPE: ["expense", "income"],
+      USER_PLAN: ["starter", "pro", "scale"],
     },
   },
 } as const;

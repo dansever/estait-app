@@ -344,14 +344,14 @@ export default function DocumentsSection({
       </Card>
 
       {/* File Manager Integration */}
-      {/* <FileManager 
-        propertyId={propertyId} 
+      <FileManager
+        propertyId={propertyId}
         onFileChange={() => {
           if (onDataChanged) {
             onDataChanged();
           }
-        }} 
-      /> */}
+        }}
+      />
     </div>
   );
 }

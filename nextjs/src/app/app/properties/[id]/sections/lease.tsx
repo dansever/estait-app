@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import AddLeaseDialog from "@/components/property/lease/AddLeaseDialog";
 import EditLeaseDialog from "@/components/property/lease/EditLeaseDialog";
-import LeaseHistory from "@/components/property/lease/LeaseHistory";
+import LeaseHistoryCard from "@/components/property/lease/LeaseHistoryCard";
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";
 import {
@@ -374,7 +374,7 @@ export default function LeaseSection({
       </Card>
 
       {/* Lease History */}
-      <LeaseHistory
+      <LeaseHistoryCard
         propertyId={propertyId}
         leases={property?.lease_history || []}
         isLoading={isLoading}
