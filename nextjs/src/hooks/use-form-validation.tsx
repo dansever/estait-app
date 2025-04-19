@@ -332,11 +332,14 @@ export function useFormValidation<T extends Record<string, any>>(
     setIsValid(false);
   }, [initialValues]);
 
-  // Validate the whole form when values change
   useEffect(() => {
-    if (isDirty) {
+    if (!isDirty) return;
+
+    const timeout = setTimeout(() => {
       validateForm();
-    }
+    }, 200); // Debounce for 200ms
+
+    return () => clearTimeout(timeout);
   }, [values, isDirty, validateForm]);
 
   return {
