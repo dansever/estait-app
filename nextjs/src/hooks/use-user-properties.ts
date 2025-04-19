@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { PropertyCardProps } from "@/components/property/property-card";
-import { PropertyStatus } from "@/components/property/property-card";
+import { PropertyCardProps } from "@/components/property/PropertyCard";
+import { PropertyStatus } from "@/components/property/PropertyCard";
 
 const STOCK_PHOTOS = [
   "/stock_photos/apartment_1.jpg",

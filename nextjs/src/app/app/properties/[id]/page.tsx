@@ -17,6 +17,13 @@ import {
   MapPin,
 } from "lucide-react";
 
+// Import section components
+import DocumentsSection from "./sections/documents";
+import FinancialsSection from "./sections/financials";
+import LeaseSection from "./sections/lease";
+import MaintenanceSection from "./sections/maintenance";
+import OverviewSection from "./sections/overview";
+
 // Import utilities for currency formatting
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";
@@ -51,7 +58,7 @@ export default function PropertyDetailsPage() {
       label: "Overview",
       icon: Eye,
       content: (
-        <PropertyOverview
+        <OverviewSection
           propertyId={propertyId}
           isLoading={isLoading}
           onDataChanged={refreshProperty}
@@ -63,9 +70,8 @@ export default function PropertyDetailsPage() {
       label: "Lease & Tenants",
       icon: Users,
       content: (
-        <PropertyLease
+        <LeaseSection
           propertyId={propertyId}
-          lease={property?.current_lease}
           isLoading={isLoading}
           onDataChanged={refreshProperty}
         />
@@ -76,7 +82,7 @@ export default function PropertyDetailsPage() {
       label: "Documents",
       icon: FileText,
       content: (
-        <PropertyDocuments
+        <DocumentsSection
           propertyId={propertyId}
           isLoading={isLoading}
           onDataChanged={refreshProperty}
@@ -88,7 +94,7 @@ export default function PropertyDetailsPage() {
       label: "Maintenance & Tasks",
       icon: Wrench,
       content: (
-        <PropertyMaintenance
+        <MaintenanceSection
           propertyId={propertyId}
           isLoading={isLoading}
           onDataChanged={refreshProperty}
@@ -100,7 +106,7 @@ export default function PropertyDetailsPage() {
       label: "Financials",
       icon: Wallet,
       content: (
-        <PropertyFinancials
+        <FinancialsSection
           propertyId={propertyId}
           isLoading={isLoading}
           onDataChanged={refreshProperty}

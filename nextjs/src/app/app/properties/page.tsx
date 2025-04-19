@@ -9,7 +9,7 @@ import { createSPASassClient } from "@/lib/supabase/client";
 import PropertyCard, {
   PropertyStatus,
   PropertyCardProps,
-} from "@/components/property/property-card";
+} from "@/components/property/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { getPropertiesByOwner } from "@/lib/supabase/queries/properties";

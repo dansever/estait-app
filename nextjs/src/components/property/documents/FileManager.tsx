@@ -25,7 +25,10 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Upload,
   Download,
@@ -36,18 +39,34 @@ import {
   AlertCircle,
   CheckCircle,
   Copy,
+  Edit,
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { FileObject } from "@supabase/storage-js";
+import { Constants } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface FileManagerProps {
   userId: string;
+  propertyId: string;
   title?: string;
   description?: string;
 }
 
+interface FileData {
+  name: string;
+  documentType: string;
+}
+
 export default function FileManager({
   userId,
+  propertyId,
   title = "File Management",
   description = "Upload, download, and share your files",
 }: FileManagerProps) {
@@ -63,19 +82,32 @@ export default function FileManager({
   const [fileToDelete, setFileToDelete] = useState<string | null>(null);
   const [showCopiedMessage, setShowCopiedMessage] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedDocumentType, setSelectedDocumentType] =
+    useState<string>("other");
+
+  // Edit file state
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [fileToEdit, setFileToEdit] = useState<string | null>(null);
+  const [editFileData, setEditFileData] = useState<FileData>({
+    name: "",
+    documentType: "other",
+  });
+
+  // Get document types from Constants
+  const documentTypeEnum = Constants.public.Enums.document_type;
 
   useEffect(() => {
-    if (userId) {
+    if (userId && propertyId) {
       loadFiles();
     }
-  }, [userId]);
+  }, [userId, propertyId]);
 
   const loadFiles = async () => {
     try {
       setLoading(true);
       setError("");
       const supabase = await createSPASassClient();
-      const { data, error } = await supabase.getFiles(userId);
+      const { data, error } = await supabase.getFiles(userId, propertyId);
 
       if (error) throw error;
       setFiles(data || []);
@@ -89,11 +121,29 @@ export default function FileManager({
 
   const handleFileUpload = async (file: File) => {
     try {
+      // Guard against missing propertyId
+      if (!propertyId) {
+        setError("Cannot upload file: Property ID is missing");
+        return;
+      }
+
       setUploading(true);
       setError("");
 
+      // Create a filename with document type as prefix
+      const fileExtension = file.name.split(".").pop() || "";
+      const baseFileName = file.name.split(".").slice(0, -1).join(".");
+      const documentTypePrefix = selectedDocumentType || "other";
+      const newFileName = `${documentTypePrefix}_${baseFileName}.${fileExtension}`;
+
       const supabase = await createSPASassClient();
-      const { error } = await supabase.uploadFile(userId, file.name, file);
+      const { error } = await supabase.uploadFile(
+        userId,
+        propertyId,
+        newFileName,
+        file,
+        selectedDocumentType
+      );
 
       if (error) throw error;
 
@@ -128,7 +178,7 @@ export default function FileManager({
         handleFileUpload(files[0]);
       }
     },
-    [userId]
+    [userId, propertyId, selectedDocumentType]
   );
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -154,6 +204,7 @@ export default function FileManager({
       const supabase = await createSPASassClient();
       const { data, error } = await supabase.shareFile(
         userId,
+        propertyId,
         filename,
         60,
         true
@@ -174,6 +225,7 @@ export default function FileManager({
       const supabase = await createSPASassClient();
       const { data, error } = await supabase.shareFile(
         userId,
+        propertyId,
         filename,
         24 * 60 * 60
       );
@@ -194,7 +246,11 @@ export default function FileManager({
     try {
       setError("");
       const supabase = await createSPASassClient();
-      const { error } = await supabase.deleteFile(userId, fileToDelete);
+      const { error } = await supabase.deleteFile(
+        userId,
+        propertyId,
+        fileToDelete
+      );
 
       if (error) throw error;
 
@@ -212,6 +268,72 @@ export default function FileManager({
     }
   };
 
+  const handleEdit = (filename: string) => {
+    const shortName = filename.split("/").pop() || "";
+
+    // Parse document type from filename
+    let documentType = "other";
+    let baseName = shortName;
+
+    // Try to extract document type prefix
+    const parts = shortName.split("_");
+    if (parts.length > 1 && documentTypeEnum.includes(parts[0] as any)) {
+      documentType = parts[0];
+      // Remove document type prefix and underscore to get base name
+      baseName = shortName.substring(documentType.length + 1);
+    }
+
+    setFileToEdit(filename);
+    setEditFileData({
+      name: baseName,
+      documentType: documentType,
+    });
+    setShowEditDialog(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!fileToEdit) return;
+
+    try {
+      setError("");
+      const supabase = await createSPASassClient();
+
+      // Get the original filename path and parts
+      const originalFilePath = fileToEdit;
+      const originalFilename = originalFilePath.split("/").pop() || "";
+
+      // Create new filename with updated document type prefix
+      const fileExtension = originalFilename.includes(".")
+        ? `.${originalFilename.split(".").pop()}`
+        : "";
+
+      const newFileName = `${editFileData.documentType}_${editFileData.name}${fileExtension}`;
+
+      // Rename the file in storage and update document record
+      const { error } = await supabase.renameFile(
+        userId,
+        propertyId,
+        originalFilePath,
+        newFileName,
+        editFileData.documentType
+      );
+
+      if (error) throw error;
+
+      await loadFiles();
+      setSuccess("File updated successfully");
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (err) {
+      setError("Failed to update file");
+      console.error("Error updating file:", err);
+    } finally {
+      setShowEditDialog(false);
+      setFileToEdit(null);
+    }
+  };
+
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -221,6 +343,27 @@ export default function FileManager({
       console.error("Failed to copy:", err);
       setError("Failed to copy to clipboard");
     }
+  };
+
+  // Function to format document type for display
+  const formatDocumentType = (type: string) => {
+    return type
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+
+  // Function to extract document type from filename
+  const getDocumentTypeFromFilename = (filename: string) => {
+    const parts = filename.split("/").pop()?.split("_") || [];
+    // Cast parts[0] to the proper type (string from the enum)
+    if (
+      parts.length > 1 &&
+      documentTypeEnum.includes(parts[0] as (typeof documentTypeEnum)[number])
+    ) {
+      return formatDocumentType(parts[0]);
+    }
+    return "Other";
   };
 
   return (
@@ -244,34 +387,57 @@ export default function FileManager({
           </Alert>
         )}
 
-        <div className="flex items-center justify-center w-full">
-          <label
-            className={`w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border-2 cursor-pointer transition-colors ${
-              isDragging
-                ? "border-primary-500 border-dashed bg-primary-50"
-                : "border-primary-600 hover:bg-primary-50"
-            }`}
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <Upload className="w-8 h-8" />
-            <span className="mt-2 text-base">
-              {uploading
-                ? "Uploading..."
-                : isDragging
-                ? "Drop your file here"
-                : "Drag and drop or click to select a file (max 50mb)"}
-            </span>
-            <input
-              type="file"
-              className="hidden"
-              onChange={handleInputChange}
-              disabled={uploading}
-              aria-label="Upload file"
-            />
-          </label>
+        <div className="space-y-4">
+          <div className="flex flex-col space-y-2">
+            <label htmlFor="document-type" className="text-sm font-medium">
+              Document Type
+            </label>
+            <Select
+              value={selectedDocumentType}
+              onValueChange={setSelectedDocumentType}
+            >
+              <SelectTrigger id="document-type">
+                <SelectValue placeholder="Select document type" />
+              </SelectTrigger>
+              <SelectContent>
+                {documentTypeEnum.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {formatDocumentType(type)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-center w-full">
+            <label
+              className={`w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border-2 cursor-pointer transition-colors ${
+                isDragging
+                  ? "border-primary-500 border-dashed bg-primary-50"
+                  : "border-primary-600 hover:bg-primary-50"
+              }`}
+              onDragEnter={handleDragEnter}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              <Upload className="w-8 h-8" />
+              <span className="mt-2 text-base">
+                {uploading
+                  ? "Uploading..."
+                  : isDragging
+                  ? "Drop your file here"
+                  : "Drag and drop or click to select a file (max 50mb)"}
+              </span>
+              <input
+                type="file"
+                className="hidden"
+                onChange={handleInputChange}
+                disabled={uploading}
+                aria-label="Upload file"
+              />
+            </label>
+          </div>
         </div>
 
         <div className="space-y-4">
@@ -290,11 +456,24 @@ export default function FileManager({
               >
                 <div className="flex items-center space-x-3">
                   <FileIcon className="h-6 w-6 text-gray-400" />
-                  <span className="font-medium">
-                    {file.name.split("/").pop()}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">
+                      {file.name.split("/").pop()}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      {getDocumentTypeFromFilename(file.name)}
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleEdit(file.name)}
+                    className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+                    title="Edit"
+                    aria-label={`Edit ${file.name.split("/").pop()}`}
+                  >
+                    <Edit className="h-5 w-5" />
+                  </button>
                   <button
                     onClick={() => handleDownload(file.name)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -365,6 +544,81 @@ export default function FileManager({
                 )}
               </button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit File Dialog */}
+        <Dialog
+          open={showEditDialog}
+          onOpenChange={(open) => {
+            if (!open) {
+              setShowEditDialog(false);
+              setFileToEdit(null);
+            }
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit File</DialogTitle>
+              <DialogDescription>
+                Update the file name and document type
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="flex flex-col space-y-2">
+                <label htmlFor="edit-file-name" className="text-sm font-medium">
+                  File Name
+                </label>
+                <Input
+                  id="edit-file-name"
+                  value={editFileData.name}
+                  onChange={(e) =>
+                    setEditFileData({ ...editFileData, name: e.target.value })
+                  }
+                  placeholder="Enter file name"
+                />
+              </div>
+              <div className="flex flex-col space-y-2">
+                <label
+                  htmlFor="edit-document-type"
+                  className="text-sm font-medium"
+                >
+                  Document Type
+                </label>
+                <Select
+                  value={editFileData.documentType}
+                  onValueChange={(value) =>
+                    setEditFileData({ ...editFileData, documentType: value })
+                  }
+                >
+                  <SelectTrigger id="edit-document-type">
+                    <SelectValue placeholder="Select document type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {documentTypeEnum.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {formatDocumentType(type)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setShowEditDialog(false);
+                  setFileToEdit(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" onClick={handleEditSave}>
+                Save Changes
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { usePropertyDetails } from "@/hooks/use-property-details";
 import {
   DollarSign,
@@ -13,10 +12,8 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   PlusCircle,
-  AlertTriangle,
   Filter,
   Download,
-  ChevronDown,
   Wallet,
   Building,
   Landmark,
@@ -32,13 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 
 export default function FinancialsSection({
   propertyId,
