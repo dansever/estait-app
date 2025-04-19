@@ -13,6 +13,10 @@ import {
   ChevronDown,
   Upload,
   Filter,
+  Download,
+  Share,
+  Trash2,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,6 +26,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import FileManager from "@/components/property/documents/FileManager";
 import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface PropertyDocumentsProps {
   propertyId: string;
@@ -33,14 +40,11 @@ interface Document {
   name: string;
   file_url: string;
   created_at: string;
-  file_size?: number;
-  document_type?: {
-    id: string;
-    name: string;
-  } | null;
+  file_size_kb?: number;
+  document_type?: string;
 }
 
-export default function PropertyDocuments({
+export default function DocumentSection({
   propertyId,
   isLoading,
 }: PropertyDocumentsProps) {
@@ -59,94 +63,81 @@ export default function PropertyDocuments({
 
   // Initialize document types from the enum in Constants
   useEffect(() => {
-    // Use the document_type enum values from Constants
-    const documentTypeEnum = Constants.public.Enums.document_type;
+    const documentTypeEnum =
+      Constants.public.Enums.document_type ||
+      Constants.public.Enums.DOCUMENT_TYPE;
 
-    // Transform the enum values into a format similar to what we'd get from the database
-    const formattedDocumentTypes = documentTypeEnum.map((type, index) => ({
-      id: String(index + 1),
-      name: type
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" "),
-      value: type,
-    }));
+    const formattedDocumentTypes = Object.values(documentTypeEnum).map(
+      (type, index) => ({
+        id: String(index + 1),
+        name: type
+          .split("_")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+        value: type,
+      })
+    );
 
     setDocumentTypes(formattedDocumentTypes);
   }, []);
 
   // Fetch all documents related to this property
-  useEffect(() => {
-    async function fetchDocuments() {
-      try {
-        setLoadingDocuments(true);
+  const fetchDocuments = async () => {
+    try {
+      setLoadingDocuments(true);
 
-        const supabase = await createSPASassClient();
+      const supabase = await createSPASassClient();
 
-        // Fetch documents for this property
-        const { data, error } = await supabase
-          .from("documents")
-          .select(
-            `
-            id,
-            title as name,
-            file_url,
-            created_at,
-            file_size,
-            document_types!inner(id, name)
-          `
-          )
-          .eq("property_id", propertyId)
-          .order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("documents")
+        .select("*")
+        .eq("property_id", propertyId)
+        .order("created_at", { ascending: false });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        // Map the data to match the Document interface
-        const formattedData = (data || []).map((doc) => ({
-          id: doc.id,
-          name: doc.name,
-          file_url: doc.file_url,
-          created_at: doc.created_at,
-          file_size: doc.file_size,
-          document_type: doc.document_types
-            ? {
-                id: doc.document_types.id,
-                name: doc.document_types.name,
-              }
-            : null,
-        }));
+      const formattedData = (data || []).map((doc) => ({
+        id: doc.id,
+        name: doc.file_name,
+        file_url: doc.file_url,
+        created_at: doc.created_at,
+        file_size_kb: doc.file_size_kb,
+        document_type: doc.document_type,
+      }));
 
-        setDocuments(formattedData);
-      } catch (err) {
-        console.error("Error fetching documents:", err);
-      } finally {
-        setLoadingDocuments(false);
-      }
+      setDocuments(formattedData);
+    } catch (err) {
+      console.error("Error fetching documents:", err);
+      toast.error("Failed to load documents");
+    } finally {
+      setLoadingDocuments(false);
     }
+  };
 
+  useEffect(() => {
     if (propertyId) {
       fetchDocuments();
     }
   }, [propertyId]);
 
-  // Filter documents based on search and type
   const filteredDocuments = documents.filter((doc) => {
     const matchesSearch =
       !searchQuery ||
       doc.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesType = !selectedType || doc.document_type?.id === selectedType;
+    const matchesType =
+      !selectedType ||
+      documentTypes.find((t) => t.value === doc.document_type)?.id ===
+        selectedType;
 
     return matchesSearch && matchesType;
   });
 
-  // Format date for display
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Format file size
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return "Unknown size";
     if (bytes < 1024) return bytes + " bytes";
@@ -154,7 +145,6 @@ export default function PropertyDocuments({
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
-  // Get document icon based on file extension
   const getDocumentIcon = (filename: string) => {
     const extension = filename.split(".").pop()?.toLowerCase() || "";
 
@@ -177,19 +167,18 @@ export default function PropertyDocuments({
   };
 
   const handleDownload = (document: Document) => {
-    // Implement download functionality
     window.open(document.file_url, "_blank");
   };
 
   const handleShare = async (document: Document) => {
     try {
       setSelectedDocument(document);
-
-      // In a real implementation, you might generate a sharing link here
-      // This is a placeholder for demonstration purposes
       setShareUrl(document.file_url);
+      await copyToClipboard(document.file_url);
+      toast.success("Link copied to clipboard");
     } catch (error) {
       console.error("Error sharing document:", error);
+      toast.error("Failed to share document");
     }
   };
 
@@ -200,12 +189,27 @@ export default function PropertyDocuments({
       setTimeout(() => setShowCopiedMessage(false), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+      throw err;
     }
   };
 
-  const handleDelete = (document: Document) => {
-    // Implement delete functionality
-    console.log("Delete document:", document.id);
+  const handleDelete = async (document: Document) => {
+    try {
+      const supabase = await createSPASassClient();
+
+      const { error } = await supabase
+        .from("documents")
+        .delete()
+        .eq("id", document.id);
+
+      if (error) throw error;
+
+      toast.success("Document deleted successfully");
+      fetchDocuments();
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      toast.error("Failed to delete document");
+    }
   };
 
   if (isLoading) {
@@ -230,7 +234,6 @@ export default function PropertyDocuments({
 
   return (
     <div className="space-y-6">
-      {/* Documents header with upload button */}
       <div className="flex flex-wrap justify-between items-center gap-4">
         <h2 className="text-xl font-bold flex items-center">
           <FileText className="h-5 w-5 mr-2" /> Property Documents
@@ -239,7 +242,7 @@ export default function PropertyDocuments({
           <Upload className="h-4 w-4 mr-2" /> Upload Document
         </Button>
       </div>
-      {/* Search and filter */}
+
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
@@ -277,157 +280,97 @@ export default function PropertyDocuments({
         </DropdownMenu>
       </div>
 
-<<<<<<< HEAD
-      {/* Document Categories Tabs */}
-      <Tabs
-        defaultValue="all"
-        value={activeTab}
-        onValueChange={setActiveTab}
-        className="w-full"
-      >
-        <TabsList className="grid grid-cols-2 md:grid-cols-7 h-auto">
-          {documentCategories.map((category) => (
-            <TabsTrigger key={category.id} value={category.id} className="py-2">
-              {category.label}
-            </TabsTrigger>
+      {loadingDocuments ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-24 w-full" />
           ))}
-        </TabsList>
-
-        {/* Tab content - shared view for all tabs */}
-        <TabsContent value={activeTab} className="mt-6">
-          {filteredDocuments.length > 0 ? (
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b">
-                        <th className="text-left p-4">Name</th>
-                        <th className="text-left p-4">Category</th>
-                        <th className="text-left p-4">Size</th>
-                        <th className="text-left p-4">Uploaded</th>
-                        <th className="text-left p-4">Uploaded By</th>
-                        <th className="text-right p-4">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDocuments.map((doc) => (
-                        <tr key={doc.id} className="border-b hover:bg-gray-50">
-                          <td className="p-4">
-                            <div className="flex items-center">
-                              <FileIcon className="h-5 w-5 mr-2 text-blue-500" />
-                              <span className="font-medium">{doc.name}</span>
-                            </div>
-                          </td>
-                          <td className="p-4">
-                            <Badge variant="outline">
-                              {doc.category.charAt(0).toUpperCase() +
-                                doc.category.slice(1)}
-                            </Badge>
-                          </td>
-                          <td className="p-4">{doc.size}</td>
-                          <td className="p-4">{formatDate(doc.uploaded)}</td>
-                          <td className="p-4">{doc.uploadedBy}</td>
-                          <td className="p-4 text-right">
-                            <div className="flex justify-end space-x-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDownloadDocument(doc.id)}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-red-500"
-                                onClick={() => handleDeleteDocument(doc.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+        </div>
+      ) : filteredDocuments.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredDocuments.map((doc) => (
+            <Card key={doc.id} className="p-4 flex flex-col">
+              <div className="flex items-start justify-between">
+                <div className="flex gap-3">
+                  {getDocumentIcon(doc.name)}
+                  <div>
+                    <h3 className="font-medium text-sm line-clamp-1">
+                      {doc.name}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {formatDate(doc.created_at)} ·{" "}
+                      {doc.file_size_kb
+                        ? `${formatFileSize(doc.file_size_kb * 1024)}`
+                        : "Unknown size"}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {documentTypes.find((t) => t.value === doc.document_type)
+                        ?.name || "Other"}
+                    </p>
+                  </div>
                 </div>
-              </CardContent>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownload(doc)}
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleShare(doc)}
+                    title="Share"
+                  >
+                    <Share className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(doc)}
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
             </Card>
-          ) : searchQuery ? (
-            <div className="flex flex-col items-center justify-center p-10 text-center">
-              <Search className="h-12 w-12 text-gray-400 mb-3" />
-              <h3 className="text-lg font-medium mb-1">
-                No matching documents
-              </h3>
-              <p className="text-gray-500 mb-4">
-                No documents match your search criteria. Try using different
-                keywords.
-              </p>
-              <Button variant="outline" onClick={() => setSearchQuery("")}>
-                Clear Search
-              </Button>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center p-10 text-center">
-              <FileText className="h-12 w-12 text-gray-400 mb-3" />
-              <h3 className="text-lg font-medium mb-1">No documents found</h3>
-              <p className="text-gray-500 mb-4">
-                This property doesn't have any{" "}
-                {activeTab !== "all"
-                  ? documentCategories
-                      .find((c) => c.id === activeTab)
-                      ?.label.toLowerCase()
-                  : "documents"}{" "}
-                yet.
-              </p>
-              <Button onClick={handleUploadDocument}>
-                <Plus className="h-4 w-4 mr-2" /> Upload Document
-              </Button>
-            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-10 border rounded-lg">
+          <FileText className="h-10 w-10 text-gray-300 mx-auto mb-2" />
+          <h3 className="text-lg font-medium">No documents found</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            {searchQuery || selectedType
+              ? "Try adjusting your filters"
+              : "Upload your first document"}
+          </p>
+        </div>
+      )}
+
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="sm:max-w-[700px]">
+          <button
+            onClick={() => setShowUploadDialog(false)}
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </button>
+
+          {user && (
+            <FileManager
+              userId={user.id}
+              propertyId={propertyId}
+              title="Upload Property Documents"
+              description="Upload and organize your property-related files"
+            />
           )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Optional: Drag-and-Drop File Upload Area */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Quick Upload</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-500 mb-2">
-              Drag and drop files here, or click to select files
-            </p>
-            <p className="text-xs text-gray-400">
-              Supported files: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG, ZIP (up to
-              25MB)
-            </p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={handleUploadDocument}
-            >
-              Select Files
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* File Manager Integration */}
-      <FileManager
-        propertyId={propertyId}
-        onFileChange={() => {
-          if (onDataChanged) {
-            onDataChanged();
-          }
-        }}
-      />
-=======
-      {/* File Management Section - Now using the reusable component */}
-      {user?.id && <FileManager userId={user.id} propertyId={propertyId} />}
->>>>>>> ab90fd1c9dd9891c4eb20fa309a08656b4c85883
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

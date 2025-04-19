@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { Database } from "@/lib/types";
+import { Database, Constants } from "@/lib/types";
 import {
   Wrench,
   Plus,
@@ -49,8 +49,8 @@ interface MaintenanceTask {
   id: string;
   title: string;
   description: string | null;
-  task_status: "open" | "completed";
-  priority: "low" | "medium" | "high" | null;
+  task_status: Database["public"]["Enums"]["TASK_STATUS"];
+  priority: Database["public"]["Enums"]["PRIORITY"] | null;
   created_at: string | null;
   due_date: string | null;
   property_id?: string | null;
@@ -200,10 +200,10 @@ export default function PropertyMaintenance({
       const taskToInsert = {
         title: newTask.title,
         description: newTask.description || null,
-        priority: newTask.priority as Database["public"]["Enums"]["priority "],
+        priority: newTask.priority as Database["public"]["Enums"]["PRIORITY"],
         due_date: newTask.due_date || null,
         property_id: propertyId,
-        task_status: "open" as Database["public"]["Enums"]["task_status"],
+        task_status: "open" as Database["public"]["Enums"]["TASK_STATUS"],
       };
 
       const { data, error } = await supabase
@@ -595,9 +595,11 @@ export default function PropertyMaintenance({
                   onChange={handleInputChange}
                 >
                   <option value="">Select priority</option>
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
+                  {Constants.public.Enums.PRIORITY.map((priority) => (
+                    <option key={priority} value={priority}>
+                      {priority.charAt(0).toUpperCase() + priority.slice(1)}
+                    </option>
+                  ))}
                 </select>
               </div>
 

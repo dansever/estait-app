@@ -7,10 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import AddLeaseDialog from "@/components/property/lease/AddLeaseDialog";
 import EditLeaseDialog from "@/components/property/lease/EditLeaseDialog";
-<<<<<<< HEAD
 import LeaseHistoryCard from "@/components/property/lease/LeaseHistoryCard";
-=======
->>>>>>> ab90fd1c9dd9891c4eb20fa309a08656b4c85883
 import { formatCurrency } from "@/components/property/lease/lease-utils";
 import { usePropertyDetails } from "@/hooks/use-property-details";
 import {
