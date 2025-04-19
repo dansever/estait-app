@@ -11,7 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { NavTabs, type TabItem } from "@/components/layout/navTabs";
+import { NavTabs, type TabItem } from "@/components/layout/app-tabs";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { MFASetup } from "@/components/MFASetup";

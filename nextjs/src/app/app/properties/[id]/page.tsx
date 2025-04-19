@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { NavTabs, TabItem } from "@/components/layout/navTabs";
+import { NavTabs, TabItem } from "@/components/layout/app-tabs";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,13 +16,6 @@ import {
   Eye,
   MapPin,
 } from "lucide-react";
-
-// Import section components
-import PropertyOverview from "./sections/overview";
-import PropertyLease from "./sections/lease";
-import PropertyDocuments from "./sections/documents";
-import PropertyFinancials from "./sections/financials";
-import PropertyMaintenance from "./sections/maintenance";
 
 // Import utilities for currency formatting
 import { formatCurrency } from "@/components/property/lease/lease-utils";
@@ -58,7 +51,11 @@ export default function PropertyDetailsPage() {
       label: "Overview",
       icon: Eye,
       content: (
-        <PropertyOverview propertyId={propertyId} isLoading={isLoading} />
+        <PropertyOverview
+          propertyId={propertyId}
+          isLoading={isLoading}
+          onDataChanged={refreshProperty}
+        />
       ),
     },
     {
@@ -79,15 +76,11 @@ export default function PropertyDetailsPage() {
       label: "Documents",
       icon: FileText,
       content: (
-        <PropertyDocuments propertyId={propertyId} isLoading={isLoading} />
-      ),
-    },
-    {
-      id: "financials",
-      label: "Financials",
-      icon: Wallet,
-      content: (
-        <PropertyFinancials propertyId={propertyId} isLoading={isLoading} />
+        <PropertyDocuments
+          propertyId={propertyId}
+          isLoading={isLoading}
+          onDataChanged={refreshProperty}
+        />
       ),
     },
     {
@@ -95,7 +88,23 @@ export default function PropertyDetailsPage() {
       label: "Maintenance & Tasks",
       icon: Wrench,
       content: (
-        <PropertyMaintenance propertyId={propertyId} isLoading={isLoading} />
+        <PropertyMaintenance
+          propertyId={propertyId}
+          isLoading={isLoading}
+          onDataChanged={refreshProperty}
+        />
+      ),
+    },
+    {
+      id: "financials",
+      label: "Financials",
+      icon: Wallet,
+      content: (
+        <PropertyFinancials
+          propertyId={propertyId}
+          isLoading={isLoading}
+          onDataChanged={refreshProperty}
+        />
       ),
     },
   ];

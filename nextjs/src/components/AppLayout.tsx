@@ -15,7 +15,7 @@
  */
 
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Menu, ChevronDown, LogOut, Key, Sun, Moon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useGlobal } from "@/lib/context/GlobalContext";
@@ -28,7 +28,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
   const { user } = useGlobal();
   const { logout } = useAuth();
-  const { theme, resolvedTheme, toggleTheme } = useGlobal();
+  const { resolvedTheme, toggleTheme } = useGlobal();
   const router = useRouter();
 
   const toggleSidebar = () => setSidebarOpen(!isSidebarOpen);
@@ -74,7 +74,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               : "bg-white shadow-sm"
           } px-4`}
         >
-          <SearchBar />
           <button
             onClick={toggleSidebar}
             className={`lg:hidden ${
@@ -85,19 +84,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <Menu className="h-6 w-6" />
           </button>
-
-          {/* Theme toggle button */}
-          <button
-            onClick={toggleTheme}
-            className={`mx-4 p-2 rounded-full ${
-              resolvedTheme === "dark"
-                ? "bg-gray-700 text-yellow-300 hover:bg-gray-600"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-            }`}
-            aria-label="Toggle theme"
-          >
-            {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
+          <SearchBar />
 
           <div className="relative ml-auto">
             <button
@@ -162,6 +149,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
                 <div className="py-1">
+                  <button
+                    onClick={toggleTheme}
+                    className={`mx-4 p-2 rounded-full ${
+                      resolvedTheme === "dark"
+                        ? "bg-gray-700 text-yellow-300 hover:bg-gray-600"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                    aria-label="Toggle theme"
+                  >
+                    {resolvedTheme === "dark" ? (
+                      <Sun size={18} />
+                    ) : (
+                      <Moon size={18} />
+                    )}
+                  </button>
                   <button
                     onClick={() => {
                       setUserDropdownOpen(false);

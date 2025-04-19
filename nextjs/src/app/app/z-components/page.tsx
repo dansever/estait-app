@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { NavTabs, TabItem } from "@/components/layout/navTabs";
+import { NavTabs, TabItem } from "@/components/layout/app-tabs";
 import {
   AlertDialog,
   AlertDialogAction,

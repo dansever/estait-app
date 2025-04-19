@@ -46,10 +46,10 @@ export function NavTabs({
               key={String(tab.id)}
               onClick={() => handleTabClick(tab.id)}
               size="sm"
-              className={`transition-colors ${
+              className={`transform transition-all duration-200 ease-in-out ${
                 isActive
-                  ? "bg-[var(--color-primary)] text-[var(--color-text-inverted)] hover:bg-[var(--color-primary)]"
-                  : "bg-[var(--color-primary-100)] text-[var(--color-primary-800)] hover:bg-[var(--color-primary-200)]"
+                  ? "bg-[var(--color-primary)] text-[var(--color-text-inverted)] hover:bg-[var(--color-primary)] hover:scale-105 shadow-md"
+                  : "bg-[var(--color-primary-100)] text-[var(--color-primary-800)] hover:bg-[var(--color-primary-200)] hover:scale-105"
               }`}
             >
               {tab.icon &&

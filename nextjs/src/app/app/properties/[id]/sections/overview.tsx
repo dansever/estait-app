@@ -1,39 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import Image from "next/image";
+import { usePropertyDetails } from "@/hooks/use-property-details";
 import { useRouter } from "next/navigation";
-import {
-  MapPin,
-  Home,
-  BedDouble,
-  Bath,
-  Calendar,
-  Landmark,
-  Building,
-  DollarSign,
-  FileEdit,
-  ImagePlus,
-  Camera,
-  Info,
-  PencilRuler,
-  Library,
-  Car,
-  Trash2,
-} from "lucide-react";
-import { TbRulerMeasure } from "react-icons/tb";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import Image from "next/image";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,24 +19,46 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-// Import the usePropertyDetails hook
-import { usePropertyDetails } from "@/hooks/use-property-details";
-import { toast } from "sonner";
-import { deleteProperty } from "@/lib/supabase/queries/properties";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Home,
+  FileEdit,
+  Trash2,
+  MapPin,
+  BedDouble,
+  Bath,
+  Building,
+  Car,
+  Calendar,
+  Camera,
+  ImagePlus,
+  Landmark,
+  DollarSign,
+  PencilRuler,
+  Library,
+  FileEdit as FileIcon,
+  Info,
+} from "lucide-react";
+import { TbRulerMeasure } from "react-icons/tb";
 import { createSPASassClient } from "@/lib/supabase/client";
+import { deleteProperty } from "@/lib/supabase/queries/properties";
+import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 
-interface PropertyOverviewProps {
-  propertyId: string;
-  isLoading: boolean;
-}
-
-export default function PropertyOverview({
+export default function OverviewSection({
   propertyId,
   isLoading: parentIsLoading,
-}: PropertyOverviewProps) {
-  // Use the hook to get real property data instead of mock data
+  onDataChanged,
+}: {
+  propertyId: string;
+  isLoading: boolean;
+  onDataChanged?: () => Promise<void>;
+}) {
+  // Use the hook to get property data
   const {
     property,
     isLoading: hookIsLoading,
@@ -90,137 +87,39 @@ export default function PropertyOverview({
     "/stock_photos/apartment_4.jpg",
   ];
 
-  // Format date for display
-  const formatDate = (dateString: string | undefined | null) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  // Format currency
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  // Handle viewing next photo
   const handleNextPhoto = () => {
     setActivePhotoIndex((prev) =>
-      prev === (stockPhotos.length || 0) - 1 ? 0 : prev + 1
+      prev === stockPhotos.length - 1 ? 0 : prev + 1
     );
   };
 
-  // Handle viewing previous photo
   const handlePrevPhoto = () => {
     setActivePhotoIndex((prev) =>
-      prev === 0 ? (stockPhotos.length || 0) - 1 : prev - 1
+      prev === 0 ? stockPhotos.length - 1 : prev - 1
     );
   };
 
-  // Handle property removal with cascading deletion of related records
+  // Handle property removal
   const removeProperty = async () => {
     try {
       setIsDeleting(true);
-
-      // First, get the Supabase client
       const supabase = await createSPASassClient();
+      const { data, error } = await supabase.rpc(
+        "delete_property_and_related_data",
+        { property_id_input: propertyId }
+      );
 
-      // 1. Delete any maintenance tasks related to this property
-      const { error: maintenanceError } = await supabase
-        .from("maintenance_tasks")
-        .delete()
-        .eq("property_id", propertyId);
-
-      if (maintenanceError) {
-        console.error("Error deleting maintenance tasks:", maintenanceError);
-        throw maintenanceError;
+      if (error || data !== true) {
+        console.error("Error deleting property:", error);
+        toast.error("Failed to delete property. Please try again.");
+        return;
       }
 
-      // 2. Delete any documents related to this property
-      const { error: documentsError } = await supabase
-        .from("documents")
-        .delete()
-        .eq("property_id", propertyId);
-
-      if (documentsError) {
-        console.error("Error deleting documents:", documentsError);
-        throw documentsError;
-      }
-
-      // 3. Get the tenant IDs associated with this property's leases
-      const { data: leases, error: leasesFetchError } = await supabase
-        .from("leases")
-        .select("id, tenant_id")
-        .eq("property_id", propertyId);
-
-      if (leasesFetchError) {
-        console.error("Error fetching leases:", leasesFetchError);
-        throw leasesFetchError;
-      }
-
-      // 4. Delete all leases related to this property
-      const { error: leasesError } = await supabase
-        .from("leases")
-        .delete()
-        .eq("property_id", propertyId);
-
-      if (leasesError) {
-        console.error("Error deleting leases:", leasesError);
-        throw leasesError;
-      }
-
-      // 5. Delete any tenants that were only associated with this property
-      // Get unique tenant IDs from leases
-      const tenantIds =
-        leases?.map((lease) => lease.tenant_id).filter(Boolean) || [];
-
-      // For each tenant, check if they have other leases before deleting
-      for (const tenantId of tenantIds) {
-        if (!tenantId) continue;
-
-        // Check if tenant has other leases
-        const { data: otherLeases, error: otherLeasesError } = await supabase
-          .from("leases")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .neq("property_id", propertyId)
-          .limit(1);
-
-        if (otherLeasesError) {
-          console.error(
-            "Error checking tenant's other leases:",
-            otherLeasesError
-          );
-          continue;
-        }
-
-        // If tenant has no other leases, delete them
-        if (!otherLeases || otherLeases.length === 0) {
-          const { error: tenantError } = await supabase
-            .from("tenants")
-            .delete()
-            .eq("id", tenantId);
-
-          if (tenantError) {
-            console.error(`Error deleting tenant ${tenantId}:`, tenantError);
-          }
-        }
-      }
-
-      // 6. Finally, delete the property itself
-      await deleteProperty(propertyId);
-
-      // Show success message
       toast.success("Property and related data successfully deleted");
-
-      // Navigate back to the properties list
       router.push("/app/properties");
     } catch (error) {
-      console.error("Error deleting property:", error);
-      toast.error("Failed to delete property. Please try again.");
+      console.error("Unexpected error deleting property:", error);
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsDeleting(false);
     }
@@ -267,7 +166,7 @@ export default function PropertyOverview({
   const parkingSpaces = property.parking_spaces || 1;
   const status = getPropertyStatus();
 
-  // Extract untis of measure
+  // Extract units of measure
   const propertyCurrency = property.currency || "USD";
   const rentCurrency = property.current_lease?.currency || "USD";
   const unitOfMeasure = property.unit_system || "imperial";
@@ -279,6 +178,39 @@ export default function PropertyOverview({
   const monthlyIncome = property.current_lease?.rent_amount || 0;
   const monthlyExpenses = 350; // Estimate or mock for now
   const cashFlow = monthlyIncome - monthlyExpenses;
+
+  const formatCurrency = (value: number, currency = "USD") => {
+    const currencySymbol = getCurrencySymbol(currency);
+    return `${currencySymbol}${value.toLocaleString()}`;
+  };
+
+  const getCurrencySymbol = (currency: string) => {
+    switch (currency) {
+      case "USD":
+        return "$";
+      case "EUR":
+        return "€";
+      case "GBP":
+        return "£";
+      case "NIS":
+        return "₪";
+      case "CAD":
+        return "C$";
+      case "AUD":
+        return "A$";
+      default:
+        return "$";
+    }
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -548,7 +480,7 @@ export default function PropertyOverview({
                 variant="outline"
                 className="mt-3 w-full text-left justify-start"
               >
-                <FileEdit className="h-4 w-4 mr-2" /> View All Documents
+                <FileIcon className="h-4 w-4 mr-2" /> View All Documents
               </Button>
             </CardContent>
           </Card>
@@ -556,190 +488,16 @@ export default function PropertyOverview({
       </div>
 
       {/* Edit Property Dialog */}
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Property Details</DialogTitle>
-            <DialogDescription>
-              Update information for this property.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="property-name" className="text-sm font-medium">
-                Property Name
-              </label>
-              <Input id="property-name" defaultValue={property.title || ""} />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="property-address" className="text-sm font-medium">
-                Address
-              </label>
-              <Input
-                id="property-address"
-                defaultValue={property.address?.street || ""}
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="property-city" className="text-sm font-medium">
-                  City
-                </label>
-                <Input
-                  id="property-city"
-                  defaultValue={property.address?.city || ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="property-state" className="text-sm font-medium">
-                  State
-                </label>
-                <Input
-                  id="property-state"
-                  defaultValue={property.address?.state || ""}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="property-zip" className="text-sm font-medium">
-                  ZIP
-                </label>
-                <Input
-                  id="property-zip"
-                  defaultValue={property.address?.zip_code || ""}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="property-type" className="text-sm font-medium">
-                  Property Type
-                </label>
-                <select
-                  id="property-type"
-                  className="w-full p-2 border rounded-md"
-                  defaultValue={propertyType}
-                >
-                  <option value="apartment">Apartment</option>
-                  <option value="house">House</option>
-                  <option value="condo">Condo</option>
-                  <option value="townhouse">Townhouse</option>
-                  <option value="commercial">Commercial</option>
-                </select>
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="property-status"
-                  className="text-sm font-medium"
-                >
-                  Status
-                </label>
-                <select
-                  id="property-status"
-                  className="w-full p-2 border rounded-md"
-                  defaultValue={status}
-                >
-                  <option value="occupied">Occupied</option>
-                  <option value="vacant">Vacant</option>
-                  <option value="maintenance">Maintenance</option>
-                  <option value="listed">Listed For Rent</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <label
-                  htmlFor="property-bedrooms"
-                  className="text-sm font-medium"
-                >
-                  Bedrooms
-                </label>
-                <Input
-                  id="property-bedrooms"
-                  type="number"
-                  defaultValue={bedrooms}
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="property-bathrooms"
-                  className="text-sm font-medium"
-                >
-                  Bathrooms
-                </label>
-                <Input
-                  id="property-bathrooms"
-                  type="number"
-                  step="0.5"
-                  defaultValue={bathrooms}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="property-sqft" className="text-sm font-medium">
-                  Size
-                </label>
-                <Input id="property-sqft" type="number" defaultValue={size} />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label htmlFor="property-year" className="text-sm font-medium">
-                  Year Built
-                </label>
-                <Input
-                  id="property-year"
-                  type="number"
-                  defaultValue={yearBuilt}
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  htmlFor="property-parking"
-                  className="text-sm font-medium"
-                >
-                  Parking Spaces
-                </label>
-                <Input
-                  id="property-parking"
-                  type="number"
-                  defaultValue={parkingSpaces || 0}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label
-                htmlFor="property-description"
-                className="text-sm font-medium"
-              >
-                Property Description
-              </label>
-              <Textarea
-                id="property-description"
-                defaultValue={property.description || ""}
-                rows={4}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                refreshProperty();
-                setShowEditDialog(false);
-              }}
-            >
-              Update Property
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditPropertyDialog
+        open={showEditDialog}
+        setOpen={setShowEditDialog}
+        property={property}
+        onPropertyUpdated={(updatedProperty) => {
+          // Update the property in the parent component
+          refreshProperty();
+          toast.success("Property updated successfully");
+        }}
+      />
 
       {/* Photo Gallery Dialog */}
       <Dialog open={showPhotoDialog} onOpenChange={setShowPhotoDialog}>
