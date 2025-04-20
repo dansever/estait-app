@@ -1,15 +1,13 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Menu, ChevronDown, LogOut, Key } from "lucide-react";
+import { Menu, ChevronDown, LogOut } from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
-import AppSidebar from "./layout/appSidebar";
+import AppSidebar from "./layout/AppSidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
-  const router = useRouter();
 
   const { user } = useGlobal();
 
@@ -20,9 +18,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error logging out:", error);
     }
-  };
-  const handleChangePassword = async () => {
-    router.push("/app/user-settings");
   };
 
   const getInitials = (email: string) => {
@@ -83,6 +78,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.email}
                   </p>
+                </div>
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setUserDropdownOpen(false);
+                    }}
+                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    <LogOut className="mr-3 h-4 w-4 text-red-400" />
+                    Sign Out
+                  </button>
                 </div>
               </div>
             )}
