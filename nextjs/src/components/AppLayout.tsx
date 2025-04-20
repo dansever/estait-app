@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Menu, ChevronDown, LogOut, Key } from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
-import AppSidebar from "@/components/layout/appSidebar";
+import AppSidebar from "./layout/appSidebar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -83,28 +83,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-sm font-medium text-gray-900 truncate">
                     {user?.email}
                   </p>
-                </div>
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      setUserDropdownOpen(false);
-                      handleChangePassword();
-                    }}
-                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                  >
-                    <Key className="mr-3 h-4 w-4 text-gray-400" />
-                    Change Password
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleLogout();
-                      setUserDropdownOpen(false);
-                    }}
-                    className="w-full flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <LogOut className="mr-3 h-4 w-4 text-red-400" />
-                    Sign Out
-                  </button>
                 </div>
               </div>
             )}

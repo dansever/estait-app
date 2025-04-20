@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, User, Files, LucideListTodo } from "lucide-react";
+import {
+  X,
+  Home,
+  Building,
+  Search,
+  UploadCloud,
+  Table2,
+  Settings,
+  Component,
+} from "lucide-react";
 
 type SidebarTab = {
   name: string;
@@ -18,9 +27,12 @@ interface AppSidebarProps {
 
 const sidebarTabs: SidebarTab[] = [
   { name: "Homepage", href: "/app", icon: Home },
-  { name: "Example Storage", href: "/app/storage", icon: Files },
-  { name: "Example Table", href: "/app/table", icon: LucideListTodo },
-  { name: "User Settings", href: "/app/user-settings", icon: User },
+  { name: "Properties", href: "/app/properties", icon: Building },
+  { name: "AI Search", href: "/app/ai-search", icon: Search },
+  { name: "Storage", href: "/app/storage", icon: UploadCloud },
+  { name: "Table", href: "/app/table", icon: Table2 },
+  { name: "Settings", href: "/app/settings", icon: Settings },
+  { name: "Components", href: "/app/z-components", icon: Component },
 ];
 
 export default function AppSidebar({
