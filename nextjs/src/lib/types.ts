@@ -130,6 +130,7 @@ export type Database = {
           created_at: string | null;
           currency: string;
           id: string;
+          is_lease_active: boolean | null;
           lease_end: string;
           lease_start: string;
           notes: string | null;
@@ -147,6 +148,7 @@ export type Database = {
           created_at?: string | null;
           currency?: string;
           id?: string;
+          is_lease_active?: boolean | null;
           lease_end: string;
           lease_start: string;
           notes?: string | null;
@@ -164,6 +166,7 @@ export type Database = {
           created_at?: string | null;
           currency?: string;
           id?: string;
+          is_lease_active?: boolean | null;
           lease_end?: string;
           lease_start?: string;
           notes?: string | null;
@@ -250,13 +253,13 @@ export type Database = {
           id: string;
           image_ids: Json;
           notes: string | null;
-          owner_id: string | null;
           parking_spaces: number;
           property_type: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price: number | null;
           size: number | null;
           title: string;
           unit_system: string;
+          user_id: string;
           year_built: number | null;
         };
         Insert: {
@@ -270,13 +273,13 @@ export type Database = {
           id?: string;
           image_ids?: Json;
           notes?: string | null;
-          owner_id?: string | null;
           parking_spaces?: number;
           property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price?: number | null;
           size?: number | null;
           title: string;
           unit_system?: string;
+          user_id: string;
           year_built?: number | null;
         };
         Update: {
@@ -290,13 +293,13 @@ export type Database = {
           id?: string;
           image_ids?: Json;
           notes?: string | null;
-          owner_id?: string | null;
           parking_spaces?: number;
           property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null;
           purchase_price?: number | null;
           size?: number | null;
           title?: string;
           unit_system?: string;
+          user_id?: string;
           year_built?: number | null;
         };
         Relationships: [
@@ -308,8 +311,8 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "properties_owner_id_fkey";
-            columns: ["owner_id"];
+            foreignKeyName: "properties_user_id_fkey";
+            columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];

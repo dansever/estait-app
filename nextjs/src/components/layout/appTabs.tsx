@@ -51,10 +51,10 @@ export function AppTabs({
               size="sm"
               aria-selected={isActive}
               role="tab"
-              className={`rounded-md px-4 py-2 font-medium transition-colors ${
+              className={`rounded-md px-4 py-2 font-medium transition-colors duration-200 ${
                 isActive
                   ? "bg-primary text-white hover:bg-primary/90"
-                  : "bg-muted text-muted-foreground hover:bg-muted/70"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
               {tab.icon &&

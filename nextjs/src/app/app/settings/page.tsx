@@ -13,7 +13,7 @@ import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Key, User, CheckCircle } from "lucide-react";
 import { MFASetup } from "@/components/MFASetup";
-import { AppTabs } from "@/components/layout/appTabs";
+import { AppTabs } from "@/components/layout/AppTabs";
 
 export default function UserSettingsPage() {
   const { user } = useGlobal();
