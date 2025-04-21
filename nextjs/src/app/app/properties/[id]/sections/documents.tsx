@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { DocumentRow } from "@/lib/types"; // adjust import if needed
 import { Constants } from "@/lib/types";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];

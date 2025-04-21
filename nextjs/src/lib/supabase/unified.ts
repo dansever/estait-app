@@ -411,6 +411,20 @@ export class SassClient {
     return data?.address || null;
   }
 
+  async updateAddress(
+    addressId: string,
+    update: AddressUpdate
+  ): Promise<AddressRow | null> {
+    const { data, error } = await this.client
+      .from(ADDRESSES_TABLE)
+      .update(update)
+      .eq("id", addressId)
+      .select()
+      .single();
+    handleSupabaseError(error);
+    return data;
+  }
+
   /* TENANT METHODS */
   async addTenant(tenant: TenantInsert): Promise<TenantRow | null> {
     const { data, error } = await this.client
