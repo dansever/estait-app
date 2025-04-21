@@ -418,16 +418,6 @@ export class SassClient {
   }
 
   /* DOCUMENT METHODS */
-  async addDocument(document: DocumentInsert): Promise<DocumentRow | null> {
-    const { data, error } = await this.client
-      .from(DOCUMENTS_TABLE)
-      .insert(document)
-      .select()
-      .single();
-    handleSupabaseError(error);
-    return data;
-  }
-
   async getDocumentsByProperty(propertyId: string): Promise<DocumentRow[]> {
     const { data, error } = await this.client
       .from(DOCUMENTS_TABLE)
