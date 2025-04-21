@@ -29,7 +29,6 @@ const sidebarTabs: SidebarTab[] = [
   { name: "Homepage", href: "/app", icon: Home },
   { name: "Properties", href: "/app/properties", icon: Building },
   { name: "AI Search", href: "/app/ai-search", icon: Search },
-  { name: "Storage", href: "/app/storage", icon: UploadCloud },
   { name: "Table", href: "/app/table", icon: Table2 },
   { name: "Settings", href: "/app/settings", icon: Settings },
   { name: "Components", href: "/app/z-components", icon: Component },

@@ -119,17 +119,109 @@ export class SassClient {
     return this.client;
   }
 
-  /* STORAGE & FILE METHODS */
+  /* FILES & DOCUMENT METHODS */
+  /* Storage Utility Methods */
+  private async uploadFileToStorage(
+    userId: string,
+    file: File,
+    propertyId?: string
+  ): Promise<string> {
+    const filename = file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
+    const child_folder = propertyId ?? "general";
+    const fullpath = `${userId}/${child_folder}/${filename}`;
+
+    const { error } = await this.client.storage
+      .from(STORAGE_BUCKET)
+      .upload(fullpath, file);
+    handleSupabaseError(error);
+
+    return fullpath;
+  }
+
+  private async deleteFileFromStorage(fullpath: string): Promise<void> {
+    const { error } = await this.client.storage
+      .from(STORAGE_BUCKET)
+      .remove([fullpath]);
+    handleSupabaseError(error);
+  }
+
+  private async generateSignedUrl(
+    fullpath: string,
+    expiresInSec: number
+  ): Promise<string> {
+    const { data, error } = await this.client.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(fullpath, expiresInSec);
+    handleSupabaseError(error);
+    return data?.signedUrl ?? "";
+  }
+
+  /* Document Table Methods */
+  private async createDocumentRecord(params: {
+    userId: string;
+    propertyId?: string;
+    file: File;
+    signedUrl: string;
+    fullpath: string;
+  }): Promise<DocumentRow> {
+    const { userId, propertyId, file, signedUrl, fullpath } = params;
+    const { data, error } = await this.client
+      .from(DOCUMENTS_TABLE)
+      .insert({
+        property_id: propertyId ?? null,
+        uploaded_by: userId,
+        file_name: file.name,
+        file_url: signedUrl,
+        file_size_kb: Math.round(file.size / 1024),
+        mime_type: file.type,
+        document_type: "other",
+        storage_full_path: fullpath, // ← add this line
+      })
+      .select()
+      .single();
+
+    handleSupabaseError(error);
+    return data;
+  }
+
+  private async deleteDocumentRecord(documentId: string): Promise<void> {
+    const { error } = await this.client
+      .from(DOCUMENTS_TABLE)
+      .delete()
+      .eq("id", documentId);
+    handleSupabaseError(error);
+  }
+
+  /* Public Files & Document Methods */
   async uploadFile(
     userId: string,
     file: File,
     propertyId?: string
-  ): Promise<{ data: any; error: PostgrestError | null }> {
-    const filename = file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
-    const child_folder = propertyId ?? "general";
-    const fullPath = `${userId}/${child_folder}/${filename}`;
+  ): Promise<DocumentRow> {
+    const fullpath = await this.uploadFileToStorage(userId, file, propertyId);
+    const signedUrl = await this.generateSignedUrl(fullpath, 3600); // 1 hour
+    return await this.createDocumentRecord({
+      userId,
+      propertyId,
+      file,
+      fullpath,
+      signedUrl,
+    });
+  }
 
-    return this.client.storage.from(STORAGE_BUCKET).upload(fullPath, file);
+  async deleteDocument(documentId: string): Promise<boolean> {
+    const { data, error } = await this.client
+      .from(DOCUMENTS_TABLE)
+      .select("storage_full_path")
+      .eq("id", documentId)
+      .single();
+    handleSupabaseError(error);
+    if (!data?.storage_full_path) {
+      throw new Error("File path not found");
+    }
+    await this.deleteFileFromStorage(data.storage_full_path);
+    await this.deleteDocumentRecord(documentId);
+    return true;
   }
 
   async getFiles(
@@ -139,16 +231,6 @@ export class SassClient {
     const child_folder = propertyId ?? "general";
     const path = `${userId}/${child_folder}`;
     return this.client.storage.from(STORAGE_BUCKET).list(path);
-  }
-
-  async deleteFile(
-    userId: string,
-    filename: string,
-    propertyId?: string
-  ): Promise<{ data: any; error: PostgrestError | null }> {
-    const child_folder = propertyId ?? "general";
-    const fullPath = `${userId}/${child_folder}/${filename}`;
-    return this.client.storage.from(STORAGE_BUCKET).remove([fullPath]);
   }
 
   async shareFile(

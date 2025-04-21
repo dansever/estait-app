@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Menu, ChevronDown, LogOut } from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -8,6 +8,24 @@ import AppSidebar from "./layout/AppSidebar";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        isUserDropdownOpen &&
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setUserDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isUserDropdownOpen]);
 
   const { user } = useGlobal();
 
@@ -72,7 +90,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
 
             {isUserDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border">
+              <div
+                ref={dropdownRef}
+                className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg border"
+              >
                 <div className="p-2 border-b border-gray-100">
                   <p className="text-xs text-gray-500">Signed in as</p>
                   <p className="text-sm font-medium text-gray-900 truncate">

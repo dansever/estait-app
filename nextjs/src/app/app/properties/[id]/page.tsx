@@ -74,6 +74,32 @@ export default function PropertyPage() {
     return <div className="p-6 text-red-500">Property not found.</div>;
   }
 
+  const refreshPropertyData = async () => {
+    if (!user?.id || typeof id !== "string") return;
+
+    const supabase = await createSPASassClient();
+
+    const rawProperty = await supabase.getProperty(user.id, id);
+    const [rawLease] = await supabase.getCurrentLeaseByProperty(id);
+    const rawAddress = await supabase.getAddressForProperty(id);
+    const rawTenant = rawLease?.tenant_id
+      ? await supabase.getTenant(rawLease.tenant_id)
+      : undefined;
+    const rawDocuments = await supabase.getDocumentsByProperty(id);
+    const rawTransactions = await supabase.getTransactionsByProperty(id);
+    const rawTasks = await supabase.getTasksByProperty(id);
+
+    setPropertyData({
+      rawProperty,
+      rawLease,
+      rawAddress,
+      rawTenant,
+      rawDocuments,
+      rawTransactions,
+      rawTasks,
+    });
+  };
+
   return (
     <div className="p-6 space-y-4">
       <Card>
@@ -113,7 +139,9 @@ export default function PropertyPage() {
           {
             id: "documents",
             label: "Documents",
-            content: <Documents data={propertyData} />,
+            content: (
+              <Documents data={propertyData} onRefresh={refreshPropertyData} />
+            ),
           },
           {
             id: "financials",
