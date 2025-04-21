@@ -7,11 +7,19 @@ import { createSPASassClient } from "@/lib/supabase/client";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AppTabs } from "@/components/layout/AppTabs";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
+import {
+  formatCurrency,
+  formatPaymentFrequency,
+} from "@/lib/formattingHelpers";
 import Overview from "./sections/overview";
 import LeaseTenants from "./sections/lease-tenants";
 import Documents from "./sections/documents";
 import Financials from "./sections/financials";
 import Maintenance from "./sections/maintenance";
+import { Constants } from "@/lib/types";
+
+type PaymentFrequency =
+  (typeof Constants.public.Enums.PAYMENT_FREQUENCY)[number];
 
 export default function PropertyPage() {
   const { id } = useParams();
@@ -112,8 +120,12 @@ export default function PropertyPage() {
             {propertyData.rawLease?.is_lease_active ? "Occupied" : "Vacant"}
           </p>
           <p>
-            <strong>Rent:</strong> {propertyData.rawLease?.rent_amount}{" "}
-            {propertyData.rawLease?.currency}
+            <strong>Rent: </strong>
+            {formatCurrency(
+              propertyData.rawLease?.rent_amount,
+              propertyData.rawLease?.currency
+            )}
+            / {formatPaymentFrequency(propertyData.rawLease?.payment_frequency)}
           </p>
           <p>
             <strong>Address:</strong>{" "}

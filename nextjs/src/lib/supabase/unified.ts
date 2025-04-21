@@ -377,6 +377,16 @@ export class SassClient {
   }
 
   /* ADDRESS METHODS */
+  async createAddress(address: AddressInsert): Promise<AddressRow | null> {
+    const { data, error } = await this.client
+      .from(ADDRESSES_TABLE)
+      .insert({ ...address })
+      .select()
+      .single();
+    handleSupabaseError(error);
+    return data;
+  }
+
   async addAddressToProperty(
     propertyId: string,
     address: AddressInsert

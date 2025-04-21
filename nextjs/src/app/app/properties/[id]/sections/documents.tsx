@@ -31,8 +31,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
+import { Database } from "@/lib/types";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];
+type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
 
 export default function FileManagement({
   data,
@@ -55,6 +57,7 @@ export default function FileManagement({
   const [editingDoc, setEditingDoc] = useState<DocumentRow | null>(null);
   const [updatedName, setUpdatedName] = useState("");
   const [updatedType, setUpdatedType] = useState<DocumentType>("other");
+  const [typeFilter, setTypeFilter] = useState<DocumentType | "all">("all");
 
   React.useEffect(() => {
     if (success) {
@@ -182,6 +185,28 @@ export default function FileManagement({
               disabled={uploading}
             />
           </label>
+          <div className="flex items-center gap-2">
+            <label htmlFor="typeFilter" className="text-sm font-medium">
+              Filter by type:
+            </label>
+            <select
+              id="typeFilter"
+              value={typeFilter}
+              onChange={(e) =>
+                setTypeFilter(e.target.value as DocumentType | "all")
+              }
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value="all">All</option>
+              {Constants.public.Enums.DOCUMENT_TYPE.map((type) => (
+                <option key={type} value={type}>
+                  {type
+                    .replace(/_/g, " ")
+                    .replace(/\b\w/g, (c) => c.toUpperCase())}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className="space-y-4">
             {!rawDocuments || rawDocuments.length === 0 ? (
@@ -189,61 +214,66 @@ export default function FileManagement({
                 No documents uploaded yet.
               </p>
             ) : (
-              rawDocuments.map((doc: DocumentRow) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between p-4 bg-white rounded-lg border"
-                >
-                  <div className="flex flex-col text-sm">
-                    <span className="font-medium">{doc.file_name}</span>
-                    <span className="text-xs text-gray-500">
-                      <Badge variant="secondary">{doc.document_type}</Badge>
-                      Uploaded at {new Date(doc.created_at).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditingDoc(doc);
-                        setUpdatedName(doc.file_name);
-                        setUpdatedType(doc.document_type);
-                      }}
-                      className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full"
-                      title="Edit"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </button>
+              rawDocuments
+                .filter(
+                  (doc) =>
+                    typeFilter === "all" || doc.document_type === typeFilter
+                )
+                .map((doc: DocumentRow) => (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between p-4 bg-white rounded-lg border"
+                  >
+                    <div className="flex flex-col text-sm">
+                      <span className="font-medium">{doc.file_name}</span>
+                      <span className="text-xs text-gray-500">
+                        <Badge variant="secondary">{doc.document_type}</Badge>
+                        Uploaded at {new Date(doc.created_at).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => {
+                          setEditingDoc(doc);
+                          setUpdatedName(doc.file_name);
+                          setUpdatedType(doc.document_type);
+                        }}
+                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full"
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
 
-                    <button
-                      onClick={() => window.open(doc.file_url, "_blank")}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
-                      title="Download"
-                    >
-                      <Download className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedFile(doc.file_name);
-                        setShareUrl(doc.file_url);
-                      }}
-                      className="p-2 text-green-600 hover:bg-green-50 rounded-full"
-                      title="Share"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setFileToDelete(doc);
-                        setShowDeleteDialog(true);
-                      }}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-full"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                      <button
+                        onClick={() => window.open(doc.file_url, "_blank")}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedFile(doc.file_name);
+                          setShareUrl(doc.file_url);
+                        }}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-full"
+                        title="Share"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setFileToDelete(doc);
+                          setShowDeleteDialog(true);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-full"
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                ))
             )}
           </div>
 

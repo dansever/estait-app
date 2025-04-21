@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import PropertyCard from "@/components/property/PropertyCard";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
+import { Button } from "@/components/ui/button";
 
 // --- helper function ---
 const propertyCardProps = (property: EnrichedProperty) => ({
@@ -26,6 +28,8 @@ export default function PropertiesPage() {
   const { user, propertiesById, setPropertiesById } = useGlobal();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const router = useRouter();
 
   useEffect(() => {
     if (!user?.id) return;
@@ -78,7 +82,13 @@ export default function PropertiesPage() {
           <CardTitle>My Properties</CardTitle>
         </CardHeader>
       </Card>
-
+      <Button
+        variant={"secondary"}
+        size={"lg"}
+        onClick={() => router.push("/app/properties/add")}
+      >
+        Add New Property{" "}
+      </Button>
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />
