@@ -4,6 +4,7 @@ import { Menu, ChevronDown, LogOut } from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import AppSidebar from "./layout/AppSidebar";
+import SearchBar from "./layout/SearchBar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -68,10 +69,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="sticky top-0 z-10 flex items-center justify-between h-16 bg-white shadow-sm px-4">
           <button
             onClick={toggleSidebar}
-            className="lg:hidden text-gray-500 hover:text-gray-700"
+            className="lg:hidden text-gray-500 hover:text-gray-700 mr-4"
           >
             <Menu className="h-6 w-6" />
           </button>
+
+          <SearchBar />
 
           <div className="relative ml-auto">
             <button
@@ -80,13 +83,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
               className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
             >
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
                 <span className="text-primary-700 font-medium">
                   {user ? getInitials(user.email) : "??"}
                 </span>
               </div>
-              <span>{user?.email || "Loading..."}</span>
-              <ChevronDown className="h-4 w-4" />
+
+              {/* <ChevronDown className="h-4 w-4" /> */}
             </button>
 
             {isUserDropdownOpen && (

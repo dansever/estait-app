@@ -72,35 +72,34 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-6 bg-white rounded-lg shadow-md">
       <Card>
         <CardHeader>
           <CardTitle>My Properties</CardTitle>
         </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {loading ? (
-            <p>Loading...</p>
-          ) : Object.keys(propertiesById).length === 0 ? (
-            <p className="text-gray-500 text-sm">No properties found.</p>
-          ) : (
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Object.values(propertiesById).map((property) => (
-                <PropertyCard
-                  key={property.rawProperty.id}
-                  {...propertyCardProps(property)}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>{" "}
       </Card>
+
+      {error && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {loading ? (
+        <p>Loading...</p>
+      ) : Object.keys(propertiesById).length === 0 ? (
+        <p className="text-gray-500 text-sm">No properties found.</p>
+      ) : (
+        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Object.values(propertiesById).map((property) => (
+            <PropertyCard
+              key={property.rawProperty.id}
+              {...propertyCardProps(property)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

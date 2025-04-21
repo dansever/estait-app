@@ -2,26 +2,30 @@
 
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formattingHelpers";
 
 export default function Overview({ data }: { data: EnrichedProperty }) {
   const { rawProperty, rawAddress } = data;
 
   return (
-    <div className="space-y-4 text-sm text-gray-700">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Card>
         <CardHeader>
           <CardTitle>Property Overview</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-gray-700">
           <p>
-            <strong>Title:</strong> {rawProperty.title}
-          </p>
-          <p>
             <strong>Description:</strong> {rawProperty.description || "—"}
           </p>
           <p>
             <strong>Type:</strong> {rawProperty.property_type || "—"}
           </p>
+          <p>
+            <strong>Purchase Price: </strong>
+
+            {formatCurrency(rawProperty.purchase_price, rawProperty.currency)}
+          </p>
+
           <p>
             <strong>Size:</strong>{" "}
             {rawProperty.size
@@ -37,14 +41,43 @@ export default function Overview({ data }: { data: EnrichedProperty }) {
             <strong>Bathrooms:</strong> {rawProperty.bathrooms ?? "N/A"}
           </p>
           <p>
+            <strong>Parking Spaces:</strong> {rawProperty.parking_spaces ?? 0}
+          </p>
+          <p>
             <strong>Year Built:</strong> {rawProperty.year_built ?? "N/A"}
           </p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Property Address</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm text-gray-700">
           <p>
             <strong>Address:</strong>{" "}
             {rawAddress
               ? `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
               : "Not set"}
           </p>
+
+          {rawAddress && (
+            <div className="mt-2 rounded-lg overflow-hidden shadow-md border">
+              <iframe
+                title="Property Location"
+                width="100%"
+                height="250"
+                loading="lazy"
+                style={{ border: 0 }}
+                allowFullScreen
+                referrerPolicy="no-referrer-when-downgrade"
+                src={`https://www.google.com/maps/embed/v1/place?key=${
+                  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+                }&q=${encodeURIComponent(
+                  `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
+                )}`}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

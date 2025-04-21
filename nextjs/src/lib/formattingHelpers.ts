@@ -12,13 +12,11 @@ export const getCurrencySymbol = (code: string): string => {
 
 // Format currency with symbol (e.g., "$1,200")
 export const formatCurrency = (
-  amount: number | undefined,
+  amount: number | null | undefined,
   currencyCode?: string
 ): string => {
-  if (amount === undefined) return "N/A";
-
+  if (amount === undefined || amount === null) return "N/A";
   const symbol = getCurrencySymbol(currencyCode || "USD");
-
   return `${symbol}${amount.toLocaleString(undefined, {
     minimumFractionDigits: 0,
     maximumFractionDigits: 1,

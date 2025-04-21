@@ -6,13 +6,31 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { AlertCircle, Info, CheckCircle, XCircle } from "lucide-react";
+import { AlertCircle, Info, CheckCircle } from "lucide-react";
 
-const buttonVariants = ["default", "secondary", "destructive", "outline"];
-const badgeVariants = ["default", "secondary", "destructive", "outline"];
+const buttonVariants = [
+  "default",
+  "secondary",
+  "destructive",
+  "outline",
+  "outlineDestructive",
+  "ghost",
+  "link",
+];
+const badgeVariants = [
+  "default",
+  "secondary",
+  "destructive",
+  "outline",
+  "outlineDestructive",
+  "ghost",
+  "success",
+  "warning",
+  "danger",
+];
 const alertVariants: {
   icon: React.ReactNode;
-  variant?: "default" | "destructive" | "success";
+  variant?: "default" | "destructive" | "success" | "warning" | "info";
   label: string;
   message: string;
 }[] = [
@@ -27,6 +45,12 @@ const alertVariants: {
     variant: "success",
     label: "Success",
     message: "Your action was successful.",
+  },
+  {
+    icon: <Info className="h-4 w-4" />,
+    variant: "warning",
+    label: "Warning",
+    message: "Here’s a warning.",
   },
   {
     icon: <Info className="h-4 w-4" />,

@@ -56,31 +56,20 @@ export default function PropertyCard({
   const getStatusBadge = () => {
     switch (status) {
       case "vacant":
-        return (
-          <Badge
-            variant="outline"
-            className="border-yellow-500 text-yellow-600"
-          >
-            Vacant
-          </Badge>
-        );
+        return <Badge className="bg-warning text-black">Vacant</Badge>;
       case "occupied":
-        return <Badge className="bg-green-600">Occupied</Badge>;
-      case "maintenance":
-        return <Badge className="bg-orange-600">Maintenance</Badge>;
-      case "listed":
-        return <Badge className="bg-blue-600">Listed</Badge>;
+        return <Badge className="bg-success text-white">Occupied</Badge>;
       default:
-        return <Badge>Unknown</Badge>;
+        return <Badge className="bg-gray-300 text-gray-800">Unknown</Badge>;
     }
   };
 
   return (
     <Card
       onClick={handleClick}
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-1 flex flex-col h-[360px] bg-white"
+      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 flex flex-col h-[360px] bg-card rounded-xl"
     >
-      <div className="relative h-48 w-full overflow-hidden rounded-t-md">
+      <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
         <Image
           src={image}
           alt={title}
@@ -90,12 +79,12 @@ export default function PropertyCard({
         />
       </div>
 
-      <CardHeader className="flex-grow">
+      <CardHeader className="flex-grow text-headline">
         <CardTitle className="line-clamp-1">{title}</CardTitle>
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <CardDescription className="line-clamp-2">
+              <CardDescription className="line-clamp-2 text-subhead">
                 {address}
               </CardDescription>
             </TooltipTrigger>
@@ -107,14 +96,14 @@ export default function PropertyCard({
       </CardHeader>
 
       <CardContent>
-        <p className="text-lg font-medium">
+        <p className="text-lg font-medium text-headline">
           {formatCurrency(rentalPrice, rentalCurrency)}{" "}
           {formatPaymentFrequency(paymentFrequency)}
         </p>
       </CardContent>
 
-      <CardFooter className="border-t pt-3 flex items-center justify-between">
-        <p className="text-sm text-gray-500">Tap to view details</p>
+      <CardFooter className="border-t pt-3 flex items-center justify-between border-divider">
+        <p className="text-sm text-subhead">Tap to view details</p>
         {getStatusBadge()}
       </CardFooter>
     </Card>
