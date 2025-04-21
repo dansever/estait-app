@@ -17,6 +17,14 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
+import {
+  formatCurrency,
+  formatPaymentFrequency,
+} from "@/lib/formattingHelpers";
+import { Constants } from "@/lib/types";
+
+type PaymentFrequency =
+  (typeof Constants.public.Enums.PAYMENT_FREQUENCY)[number];
 
 interface PropertyCardProps {
   id: string;
@@ -25,6 +33,8 @@ interface PropertyCardProps {
   address: string;
   status: string;
   rentalPrice: number;
+  rentalCurrency: string;
+  paymentFrequency: PaymentFrequency;
 }
 
 export default function PropertyCard({
@@ -34,6 +44,8 @@ export default function PropertyCard({
   address,
   status,
   rentalPrice,
+  rentalCurrency,
+  paymentFrequency,
 }: PropertyCardProps) {
   const router = useRouter();
 
@@ -96,7 +108,8 @@ export default function PropertyCard({
 
       <CardContent>
         <p className="text-lg font-medium">
-          ${rentalPrice.toLocaleString()} / month
+          {formatCurrency(rentalPrice, rentalCurrency)}{" "}
+          {formatPaymentFrequency(paymentFrequency)}
         </p>
       </CardContent>
 

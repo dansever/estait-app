@@ -122,42 +122,47 @@ export class SassClient {
   /* STORAGE & FILE METHODS */
   async uploadFile(
     userId: string,
-    propertyId: string,
-    file: File
+    file: File,
+    propertyId?: string
   ): Promise<{ data: any; error: PostgrestError | null }> {
     const filename = file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
-    const fullPath = `${userId}/${propertyId}/${filename}`;
+    const child_folder = propertyId ?? "general";
+    const fullPath = `${userId}/${child_folder}/${filename}`;
+
     return this.client.storage.from(STORAGE_BUCKET).upload(fullPath, file);
   }
 
   async getFiles(
     userId: string,
-    propertyId: string
+    propertyId?: string
   ): Promise<{ data: any[] | null; error: PostgrestError | null }> {
-    const path = `${userId}/${propertyId}`;
+    const child_folder = propertyId ?? "general";
+    const path = `${userId}/${child_folder}`;
     return this.client.storage.from(STORAGE_BUCKET).list(path);
   }
 
   async deleteFile(
     userId: string,
-    propertyId: string,
-    filename: string
+    filename: string,
+    propertyId?: string
   ): Promise<{ data: any; error: PostgrestError | null }> {
-    const fullPath = `${userId}/${propertyId}/${filename}`;
+    const child_folder = propertyId ?? "general";
+    const fullPath = `${userId}/${child_folder}/${filename}`;
     return this.client.storage.from(STORAGE_BUCKET).remove([fullPath]);
   }
 
   async shareFile(
     userId: string,
-    propertyId: string,
     filename: string,
     timeInSec: number,
-    forDownload: boolean = false
+    forDownload: boolean = false,
+    propertyId?: string
   ): Promise<{
     data: { signedUrl: string } | null;
     error: PostgrestError | null;
   }> {
-    const fullPath = `${userId}/${propertyId}/${filename}`;
+    const child_folder = propertyId ?? "general";
+    const fullPath = `${userId}/${child_folder}/${filename}`;
     return this.client.storage
       .from(STORAGE_BUCKET)
       .createSignedUrl(fullPath, timeInSec, { download: forDownload });
