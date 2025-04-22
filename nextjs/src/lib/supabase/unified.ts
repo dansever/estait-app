@@ -10,7 +10,6 @@ export enum ClientType {
 const PROPERTIES_TABLE = "properties";
 const LEASES_TABLE = "leases";
 const ADDRESSES_TABLE = "addresses";
-const TENANTS_TABLE = "tenants";
 const MAINTENANCE_TASKS_TABLE = "maintenance_tasks";
 const DOCUMENTS_TABLE = "documents";
 const TRANSACTIONS_TABLE = "transactions";
@@ -30,12 +29,6 @@ type AddressInsert =
   Database["public"]["Tables"][typeof ADDRESSES_TABLE]["Insert"];
 type AddressUpdate =
   Database["public"]["Tables"][typeof ADDRESSES_TABLE]["Update"];
-
-type TenantRow = Database["public"]["Tables"][typeof TENANTS_TABLE]["Row"];
-type TenantInsert =
-  Database["public"]["Tables"][typeof TENANTS_TABLE]["Insert"];
-type TenantUpdate =
-  Database["public"]["Tables"][typeof TENANTS_TABLE]["Update"];
 
 type TaskRow =
   Database["public"]["Tables"][typeof MAINTENANCE_TASKS_TABLE]["Row"];
@@ -158,25 +151,22 @@ export class SassClient {
   }
 
   private async generateSignedUrl(
-    fullpath: string,
-    expiresInSec: number
+    fullPath: string,
+    expiresInSec: number,
+    forDownload: boolean = false
   ): Promise<string> {
     const { data, error } = await this.client.storage
       .from(STORAGE_BUCKET)
-      .createSignedUrl(fullpath, expiresInSec);
+      .createSignedUrl(fullPath, expiresInSec, { download: forDownload });
     handleSupabaseError(error);
-    return data?.signedUrl ?? "";
+    return data?.signedUrl || "";
   }
 
   async getDocumentDownloadUrl(
     fullpath: string,
     expiresInSec: number = 60
   ): Promise<string> {
-    const { data, error } = await this.client.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(fullpath, expiresInSec);
-    handleSupabaseError(error);
-    return data?.signedUrl || "";
+    return await this.generateSignedUrl(fullpath, expiresInSec);
   }
 
   /* Document Table Methods */
@@ -206,7 +196,7 @@ export class SassClient {
     return data;
   }
 
-  private async removeDocumentEntry(documentId: string): Promise<void> {
+  private async deleteDocumentEntry(documentId: string): Promise<void> {
     const { error } = await this.client
       .from(DOCUMENTS_TABLE)
       .delete()
@@ -231,7 +221,7 @@ export class SassClient {
     });
   }
 
-  async removeDocumentAndFile(documentId: string): Promise<boolean> {
+  async deleteDocumentAndFile(documentId: string): Promise<boolean> {
     const { data, error } = await this.client
       .from(DOCUMENTS_TABLE)
       .select("storage_full_path, uploaded_by")
@@ -243,7 +233,7 @@ export class SassClient {
     if (!data?.uploaded_by) throw new Error("Invalid user ownership");
 
     await this.deleteFileFromStorage(data.storage_full_path);
-    await this.removeDocumentEntry(documentId);
+    await this.deleteDocumentEntry(documentId);
     return true;
   }
 
@@ -268,9 +258,12 @@ export class SassClient {
   }> {
     const child_folder = propertyId ?? "general";
     const fullPath = `${userId}/${child_folder}/${filename}`;
-    return this.client.storage
-      .from(STORAGE_BUCKET)
-      .createSignedUrl(fullPath, timeInSec, { download: forDownload });
+    const signedUrl = await this.generateSignedUrl(
+      fullPath,
+      timeInSec,
+      forDownload
+    );
+    return { data: { signedUrl }, error: null };
   }
 
   async updateDocument(
@@ -291,10 +284,28 @@ export class SassClient {
     const { data, error } = await this.client
       .from(DOCUMENTS_TABLE)
       .select("*")
-      .eq("property_id", propertyId)
-      .order("created_at", { ascending: false });
+      .eq("property_id", propertyId);
     handleSupabaseError(error);
     return data || [];
+  }
+
+  async deleteDocumentsOfProperty(propertyId: string): Promise<void> {
+    try {
+      const documents = await this.getDocumentsByProperty(propertyId);
+      if (documents.length === 0) {
+        console.log("[deleteDocumentsOfProperty]: No documents for property");
+        return;
+      }
+      for (const doc of documents) {
+        await this.deleteDocumentAndFile(doc.id);
+      }
+      console.log(
+        "[deleteDocumentsOfProperty]: Deleted all documents and files for property"
+      );
+    } catch (err) {
+      console.error("[deleteDocumentsOfProperty]: Unexpected error:", err);
+      throw err;
+    }
   }
 
   /* PROPERTIES METHODS */
@@ -354,7 +365,13 @@ export class SassClient {
     return data;
   }
 
-  async removeProperty(userId: string, propertyId: string): Promise<boolean> {
+  async deleteProperty(userId: string, propertyId: string): Promise<boolean> {
+    await this.deleteAddressOfProperty(propertyId);
+    await this.deleteLeasesOfProperty(propertyId);
+    await this.deleteTasksOfProperty(propertyId);
+    await this.deleteTransactionsOfProperty(propertyId);
+    await this.deleteDocumentsOfProperty(propertyId);
+
     const { error } = await this.client
       .from(PROPERTIES_TABLE)
       .delete()
@@ -414,13 +431,24 @@ export class SassClient {
     return data;
   }
 
-  async removeLease(leaseId: string): Promise<boolean> {
+  async deleteLease(leaseId: string): Promise<boolean> {
     const { error } = await this.client
       .from(LEASES_TABLE)
       .delete()
       .eq("id", leaseId);
     handleSupabaseError(error);
     return true;
+  }
+
+  private async deleteLeasesOfProperty(propertyId: string): Promise<void> {
+    const { data: leases, error } = await this.client
+      .from(LEASES_TABLE)
+      .select("id")
+      .eq("property_id", propertyId);
+    handleSupabaseError(error);
+    for (const lease of leases ?? []) {
+      await this.deleteLease(lease.id);
+    }
   }
 
   /* ADDRESS METHODS */
@@ -457,15 +485,42 @@ export class SassClient {
     return data;
   }
 
-  // Get the address for a specific property
-  async getAddressForProperty(propertyId: string): Promise<AddressRow | null> {
-    const { data, error } = await this.client
-      .from(PROPERTIES_TABLE)
-      .select(`address:address_id (*)`)
-      .eq("id", propertyId)
-      .single();
-    handleSupabaseError(error);
-    return data?.address || null;
+  // Delete address of property
+  async deleteAddressOfProperty(propertyId: string): Promise<void> {
+    try {
+      // Step 1: Get the address_id from the property
+      const { data: property, error } = await this.client
+        .from(PROPERTIES_TABLE)
+        .select("address_id")
+        .eq("id", propertyId)
+        .single();
+      handleSupabaseError(error);
+
+      const addressId = property?.address_id;
+      if (!addressId) return;
+
+      // Step 2: Nullify the address_id in the property to avoid FK violation
+      const { error: updateError } = await this.client
+        .from(PROPERTIES_TABLE)
+        .update({ address_id: null })
+        .eq("id", propertyId);
+      handleSupabaseError(updateError);
+
+      // Step 3: Now safely delete the address
+      const { error: deleteError } = await this.client
+        .from(ADDRESSES_TABLE)
+        .delete()
+        .eq("id", addressId);
+      handleSupabaseError(deleteError);
+
+      console.log(
+        "[deleteAddressOfProperty]: Deleted address for property:",
+        propertyId
+      );
+    } catch (err) {
+      console.error("[deleteAddressOfProperty]: Unexpected error:", err);
+      throw err;
+    }
   }
 
   async updateAddress(
@@ -482,48 +537,24 @@ export class SassClient {
     return data;
   }
 
-  /* TENANT METHODS */
-  async addTenant(tenant: TenantInsert): Promise<TenantRow | null> {
-    const { data, error } = await this.client
-      .from(TENANTS_TABLE)
-      .insert(tenant)
-      .select()
+  async getAddressForProperty(propertyId: string): Promise<AddressRow | null> {
+    const { data: property, error: propertyError } = await this.client
+      .from(PROPERTIES_TABLE)
+      .select("address_id")
+      .eq("id", propertyId)
       .single();
-    handleSupabaseError(error);
-    return data;
-  }
+    handleSupabaseError(propertyError);
 
-  async getTenant(tenantId: string): Promise<TenantRow | null> {
-    const { data, error } = await this.client
-      .from(TENANTS_TABLE)
+    if (!property?.address_id) return null;
+
+    const { data: address, error: addressError } = await this.client
+      .from(ADDRESSES_TABLE)
       .select("*")
-      .eq("id", tenantId)
+      .eq("id", property.address_id)
       .single();
-    handleSupabaseError(error);
-    return data;
-  }
+    handleSupabaseError(addressError);
 
-  async updateTenant(
-    tenantId: string,
-    update: TenantUpdate
-  ): Promise<TenantRow | null> {
-    const { data, error } = await this.client
-      .from(TENANTS_TABLE)
-      .update(update)
-      .eq("id", tenantId)
-      .select()
-      .single();
-    handleSupabaseError(error);
-    return data;
-  }
-
-  async removeTenant(tenantId: string): Promise<boolean> {
-    const { error } = await this.client
-      .from(TENANTS_TABLE)
-      .delete()
-      .eq("id", tenantId);
-    handleSupabaseError(error);
-    return true;
+    return address;
   }
 
   /* MAINTENANCE TASKS */
@@ -561,13 +592,24 @@ export class SassClient {
     return data;
   }
 
-  async removeTask(taskId: string): Promise<boolean> {
+  async deleteTask(taskId: string): Promise<boolean> {
     const { error } = await this.client
       .from(MAINTENANCE_TASKS_TABLE)
       .delete()
       .eq("id", taskId);
     handleSupabaseError(error);
     return true;
+  }
+
+  private async deleteTasksOfProperty(propertyId: string): Promise<void> {
+    console.log(
+      "[deleteTasksOfProperty]: Deleting tasks for property:",
+      propertyId
+    );
+    const tasks = await this.getTasksByProperty(propertyId);
+    for (const task of tasks) {
+      await this.deleteTask(task.id);
+    }
   }
 
   /* TRANSACTION METHODS */
@@ -609,12 +651,26 @@ export class SassClient {
     return data;
   }
 
-  async removeTransaction(transactionId: string): Promise<boolean> {
+  async deleteTransaction(transactionId: string): Promise<boolean> {
+    console.log("[deleteTransaction]: Removing transaction:", transactionId);
     const { error } = await this.client
       .from(TRANSACTIONS_TABLE)
       .delete()
       .eq("id", transactionId);
     handleSupabaseError(error);
     return true;
+  }
+
+  private async deleteTransactionsOfProperty(
+    propertyId: string
+  ): Promise<void> {
+    console.log(
+      "[deleteTransactionsOfProperty]: Deleting transactions for property:",
+      propertyId
+    );
+    const transactions = await this.getTransactionsByProperty(propertyId);
+    for (const transaction of transactions) {
+      await this.deleteTransaction(transaction.id);
+    }
   }
 }

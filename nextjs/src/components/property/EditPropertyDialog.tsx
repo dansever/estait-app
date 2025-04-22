@@ -16,6 +16,7 @@ import { Constants } from "@/lib/types";
 import { currencyList } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { createSPASassClient } from "@/lib/supabase/client";
+import AddressInput from "@/components/property/GoogleAddressInput";
 
 type EditPropertyDialogProps = {
   data: EnrichedProperty;
@@ -43,10 +44,12 @@ export default function EditPropertyDialog({
     parking_spaces: Math.max(0, data.rawProperty.parking_spaces || 0),
     year_built: Math.max(0, Number(data.rawProperty.year_built)) || 0,
     street: data.rawAddress?.street || "",
+    street_number: data.rawAddress?.street_number || "",
+    apartment_number: data.rawAddress?.apartment_number || "",
     city: data.rawAddress?.city || "",
     state: data.rawAddress?.state || "",
     country: data.rawAddress?.country || "",
-    apartment_number: data.rawAddress?.apartment_number || "",
+    zip_code: data.rawAddress?.zip_code || "",
   });
 
   const handleChange = (
@@ -87,10 +90,12 @@ export default function EditPropertyDialog({
 
       const addressUpdate = {
         street: formData.street,
+        street_number: formData.street_number,
         apartment_number: formData.apartment_number,
         city: formData.city,
         state: formData.state,
         country: formData.country,
+        zip_code: formData.zip_code,
       };
 
       const supabase = await createSPASassClient();
@@ -101,9 +106,11 @@ export default function EditPropertyDialog({
         propertyUpdate
       );
 
-      if (data.rawAddress?.id) {
-        await supabase.updateAddress(data.rawAddress.id, addressUpdate);
-      }
+      const updatedAddress = await supabase.updateAddress(
+        data.rawAddress.id,
+        addressUpdate
+      );
+      console.log("Updated address:", updatedAddress);
 
       // Optionally show success message here
       await onSave(); // refetch full data
@@ -280,7 +287,29 @@ export default function EditPropertyDialog({
           <Card>
             <CardContent className="pt-4">
               <h3 className="text-lg font-semibold mb-4">Property Address</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Google Autocomplete Input */}
+              <AddressInput
+                name="Property Address"
+                defaultValue={formData.street}
+                placeholder="Start typing the address..."
+                required
+                onSelect={(place) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    street: place.street || "",
+                    street_number: place.street_number || "",
+                    apartment_number: place.apartment_number || "",
+                    city: place.city || "",
+                    state: place.state || "",
+                    country: place.country || "",
+                    zip_code: place.zip_code || "",
+                  }))
+                }
+              />
+
+              {/* Manual/Editable Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Street
@@ -288,6 +317,17 @@ export default function EditPropertyDialog({
                   <Input
                     name="street"
                     value={formData.street}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Street Number
+                  </label>
+                  <Input
+                    name="street_number"
+                    value={formData.street_number}
                     onChange={handleChange}
                   />
                 </div>
@@ -330,6 +370,17 @@ export default function EditPropertyDialog({
                   <Input
                     name="country"
                     value={formData.country}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Zip Code
+                  </label>
+                  <Input
+                    name="zip_code"
+                    value={formData.zip_code}
                     onChange={handleChange}
                   />
                 </div>

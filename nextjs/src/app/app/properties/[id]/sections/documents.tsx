@@ -112,7 +112,7 @@ export default function FileManagement({
     try {
       setError("");
       const supabase = await createSPASassClient();
-      await supabase.removeDocumentAndFile(fileToDelete.id);
+      await supabase.deleteDocumentAndFile(fileToDelete.id);
       await onRefresh();
       setSuccess("File deleted successfully");
     } catch (err) {

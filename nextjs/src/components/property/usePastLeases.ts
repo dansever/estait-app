@@ -2,27 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createSPASassClient } from "@/lib/supabase/client";
+import { Database } from "@/lib/types";
 
-type TenantRow = {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
-};
-
-type LeaseRow = {
-  lease_start: string;
-  lease_end: string;
-  rent_amount: number;
-  currency: string;
-  payment_frequency: string;
-  tenant_id: string | null;
-};
-
-export type TimelineItem = LeaseRow & { tenant: TenantRow | null };
+type LeaseRow = Database["public"]["Tables"]["leases"]["Row"];
 
 export function usePastLeases(propertyId: string) {
-  const [leases, setLeases] = useState<TimelineItem[]>([]);
+  const [leases, setLeases] = useState<LeaseRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,16 +16,8 @@ export function usePastLeases(propertyId: string) {
         const supabase = await createSPASassClient();
         const leaseData = await supabase.getPastLeasesByProperty(propertyId);
 
-        const leasesWithTenants = await Promise.all(
-          leaseData.map(async (lease) => {
-            const tenant = lease.tenant_id
-              ? await supabase.getTenant(lease.tenant_id)
-              : null;
-            return { ...lease, tenant };
-          })
-        );
-
-        setLeases(leasesWithTenants);
+        // Tenant data is now in the lease row, no extra fetch needed
+        setLeases(leaseData);
       } catch (err) {
         console.error("Failed to load past leases:", err);
       } finally {

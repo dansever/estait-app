@@ -2,18 +2,14 @@
 
 import { useState } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
-import { formatCurrency } from "@/lib/formattingHelpers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatCurrency } from "@/lib/formattingHelpers";
+import { Button } from "@/components/ui/button";
+import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 import { Progress } from "@/components/ui/progress";
 import { FaWhatsapp, FaPhone } from "react-icons/fa";
 import { MdOutlineMail } from "react-icons/md";
-import { Button } from "@/components/ui/button";
-import {
-  differenceInDays,
-  differenceInMonths,
-  parseISO,
-  format,
-} from "date-fns";
+import { differenceInDays, parseISO, format, isValid } from "date-fns";
 import EditLeaseTenantDialog from "@/components/property/EditLeaseTenantDialog";
 import { usePastLeases } from "@/components/property/usePastLeases";
 
@@ -24,7 +20,7 @@ export default function LeaseTenants({
   data: EnrichedProperty;
   refreshData: () => void;
 }) {
-  const { rawLease, rawTenant, rawProperty } = data;
+  const { rawProperty, rawLease } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
   const { leases: pastLeases, loading: loadingPastLeases } = usePastLeases(
     rawProperty.id
@@ -32,28 +28,58 @@ export default function LeaseTenants({
 
   if (!rawLease) return null;
 
-  const start = parseISO(rawLease.lease_start);
-  const end = parseISO(rawLease.lease_end);
+  const start = rawLease.lease_start ? parseISO(rawLease.lease_start) : null;
+  const end = rawLease.lease_end ? parseISO(rawLease.lease_end) : null;
   const today = new Date();
-  const totalDays = differenceInDays(end, start);
-  const completedDays = differenceInDays(today, start);
-  const totalMonths = differenceInMonths(end, start);
-  const completedMonths = differenceInMonths(today, start);
-  const percentComplete = Math.min(
-    100,
-    Math.max(0, (completedDays / totalDays) * 100)
-  );
+  const totalDays =
+    start && end && isValid(start) && isValid(end)
+      ? differenceInDays(end, start)
+      : 0;
+  const completedDays =
+    start && isValid(start) ? differenceInDays(today, start) : 0;
+
+  const percentComplete =
+    totalDays > 0
+      ? Math.min(100, Math.max(0, (completedDays / totalDays) * 100))
+      : 0;
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button variant="outline" size="lg" onClick={() => setIsEditOpen(true)}>
-          Edit
-        </Button>
-        <Button variant="outlineDestructive" size="lg">
-          Delete
-        </Button>
+        {rawLease.is_lease_active ? (
+          <>
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={() => setIsEditOpen(true)}
+            >
+              Edit Lease
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              onClick={() => {
+                // TODO: Open add future lease dialog
+                alert("Coming soon: Add Future Lease");
+              }}
+            >
+              Add Future Lease
+            </Button>
+          </>
+        ) : (
+          <Button
+            variant="default"
+            size="lg"
+            onClick={() => {
+              // TODO: Open add lease dialog
+              alert("Coming soon: Add Lease");
+            }}
+          >
+            Add Lease
+          </Button>
+        )}
       </div>
+
       {/* Cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Lease Card */}
@@ -85,10 +111,10 @@ export default function LeaseTenants({
               {formatCurrency(rawLease.security_deposit, rawLease.currency)}
             </p>
             <p>
-              <strong>Start:</strong> {rawLease.lease_start}
+              <strong>Start:</strong> {start ? format(start, "PPP") : "—"}
             </p>
             <p>
-              <strong>End:</strong> {rawLease.lease_end}
+              <strong>End:</strong> {end ? format(end, "PPP") : "—"}
             </p>
             <div>
               <strong>Lease Progress:</strong>
@@ -110,34 +136,40 @@ export default function LeaseTenants({
           <CardContent className="space-y-2 text-sm text-gray-700">
             <p>
               <strong>Name:</strong>{" "}
-              {rawTenant
-                ? `${rawTenant.first_name} ${rawTenant.last_name}`
+              {rawLease.tenant_first_name
+                ? `${rawLease.tenant_first_name} ${rawLease.tenant_last_name}`
                 : "N/A"}
             </p>
-            {rawTenant && (
-              <>
-                <div className="flex items-center gap-2">
-                  <MdOutlineMail className="h-4 w-4 text-gray-500" />
-                  <a
-                    href={`mailto:${rawTenant.email}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    {rawTenant.email}
-                  </a>
-                </div>
+
+            {rawLease.tenant_email && (
+              <div className="flex items-center gap-2">
+                <MdOutlineMail className="h-4 w-4 text-gray-500" />
+                <a
+                  href={`mailto:${rawLease.tenant_email}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {rawLease.tenant_email}
+                </a>
+              </div>
+            )}
+            {rawLease.tenant_phone && (
+              <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <FaPhone className="h-4 w-4 text-gray-500" />
                   <a
-                    href={`tel:${rawTenant.phone}`}
+                    href={`tel:${rawLease.tenant_phone}`}
                     className="text-blue-600 hover:underline"
                   >
-                    {rawTenant.phone}
+                    {rawLease.tenant_phone}
                   </a>
                 </div>
                 <div className="flex items-center gap-2">
                   <FaWhatsapp className="h-4 w-4 text-gray-500" />
                   <a
-                    href={`https://wa.me/${rawTenant.phone.replace(/\D/g, "")}`}
+                    href={`https://wa.me/${rawLease.tenant_phone.replace(
+                      /\D/g,
+                      ""
+                    )}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-green-600 hover:underline"
@@ -145,7 +177,7 @@ export default function LeaseTenants({
                     WhatsApp
                   </a>
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -158,7 +190,7 @@ export default function LeaseTenants({
         </CardHeader>
         <CardContent className="space-y-6 text-sm text-gray-700">
           {loadingPastLeases ? (
-            <p className="text-muted-foreground">Loading past lease data...</p>
+            <p>Loading...</p>
           ) : pastLeases.length === 0 ? (
             <p className="text-muted-foreground">
               No past leases are available.
@@ -183,36 +215,28 @@ export default function LeaseTenants({
                     </p>
                   </div>
                   <div>
-                    {lease.tenant ? (
-                      <>
-                        <p>
-                          <strong>Tenant:</strong> {lease.tenant.first_name}{" "}
-                          {lease.tenant.last_name}
-                        </p>
-                        <p>
-                          <strong>Email:</strong>{" "}
-                          <a
-                            href={`mailto:${lease.tenant.email}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {lease.tenant.email}
-                          </a>
-                        </p>
-                        <p>
-                          <strong>Phone:</strong>{" "}
-                          <a
-                            href={`tel:${lease.tenant.phone}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {lease.tenant.phone}
-                          </a>
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-muted-foreground italic">
-                        No tenant info
-                      </p>
-                    )}
+                    <p>
+                      <strong>Tenant:</strong> {lease.tenant_first_name}{" "}
+                      {lease.tenant_last_name}
+                    </p>
+                    <p>
+                      <strong>Email:</strong>{" "}
+                      <a
+                        href={`mailto:${lease.tenant_email}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {lease.tenant_email}
+                      </a>
+                    </p>
+                    <p>
+                      <strong>Phone:</strong>{" "}
+                      <a
+                        href={`tel:${lease.tenant_phone}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {lease.tenant_phone}
+                      </a>
+                    </p>
                   </div>
                 </div>
               </div>

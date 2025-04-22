@@ -11,11 +11,9 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Wrench,
   Plus,
   LayoutList,
   Clock,
@@ -26,7 +24,6 @@ import {
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
-import { format } from "date-fns";
 
 export default function Maintenance({
   data,
@@ -96,7 +93,7 @@ export default function Maintenance({
 
   const deleteTask = async (taskId: string) => {
     const supabase = await createSPASassClient();
-    await supabase.removeTask(taskId);
+    await supabase.deleteTask(taskId);
     refreshData();
   };
 

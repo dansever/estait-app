@@ -31,7 +31,6 @@ export default function EditLeaseTenantDialog({
   onSave,
 }: EditLeaseTenantDialogProps) {
   const lease = data.rawLease;
-  const tenant = data.rawTenant;
 
   const [formData, setFormData] = React.useState({
     rent_amount: lease?.rent_amount || 0,
@@ -42,12 +41,10 @@ export default function EditLeaseTenantDialog({
     payment_due_day: lease?.payment_due_day || 1,
     security_deposit: lease?.security_deposit || 0,
     is_lease_active: lease?.is_lease_active ?? true,
-
-    first_name: tenant?.first_name || "",
-    last_name: tenant?.last_name || "",
-    email: tenant?.email || "",
-    phone: tenant?.phone || "",
-    notes: tenant?.notes || "",
+    first_name: lease?.tenant_first_name || "",
+    last_name: lease?.tenant_last_name || "",
+    email: lease?.tenant_email || "",
+    phone: lease?.tenant_phone || "",
   });
 
   const handleChange = (
@@ -67,7 +64,7 @@ export default function EditLeaseTenantDialog({
 
   const handleSave = async () => {
     try {
-      if (!lease?.id || !lease?.property_id || !tenant?.id) return;
+      if (!lease?.id || !lease?.property_id) return;
 
       // Validate dates
       if (formData.lease_end < formData.lease_start) {
@@ -78,6 +75,7 @@ export default function EditLeaseTenantDialog({
       const supabase = await createSPASassClient();
 
       await supabase.updateLease(lease.id, {
+        // lease fields
         rent_amount: formData.rent_amount,
         currency: formData.currency,
         lease_start: formData.lease_start,
@@ -86,20 +84,18 @@ export default function EditLeaseTenantDialog({
         payment_due_day: formData.payment_due_day,
         security_deposit: formData.security_deposit,
         is_lease_active: formData.is_lease_active,
-      });
 
-      await supabase.updateTenant(tenant.id, {
+        // tenant fields
         first_name: formData.first_name,
         last_name: formData.last_name,
         email: formData.email,
         phone: formData.phone,
-        notes: formData.notes,
       });
 
       await onSave();
       onOpenChange(false);
     } catch (err) {
-      console.error("Lease or tenant update failed:", err);
+      console.error("Lease update failed:", err);
     }
   };
 
@@ -261,16 +257,6 @@ export default function EditLeaseTenantDialog({
                   <Input
                     name="phone"
                     value={formData.phone}
-                    onChange={handleChange}
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium mb-1">
-                    Notes
-                  </label>
-                  <Input
-                    name="notes"
-                    value={formData.notes}
                     onChange={handleChange}
                   />
                 </div>

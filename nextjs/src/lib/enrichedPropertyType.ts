@@ -3,7 +3,6 @@ import { Database } from "@/lib/types";
 export type PropertyRow = Database["public"]["Tables"]["properties"]["Row"];
 export type LeaseRow = Database["public"]["Tables"]["leases"]["Row"];
 export type AddressRow = Database["public"]["Tables"]["addresses"]["Row"];
-export type TenantRow = Database["public"]["Tables"]["tenants"]["Row"];
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
 export type TransactionRow =
   Database["public"]["Tables"]["transactions"]["Row"];
@@ -13,7 +12,6 @@ export type EnrichedProperty = {
   rawProperty: PropertyRow;
   rawLease?: LeaseRow;
   rawAddress?: AddressRow;
-  rawTenant?: TenantRow;
   rawDocuments?: DocumentRow[];
   rawTransactions?: TransactionRow[];
   rawTasks?: TasksRow[];

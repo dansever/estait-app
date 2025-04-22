@@ -33,9 +33,9 @@ export default function Overview({
       return;
     }
 
-    const success = await supabase.removeProperty(user.id, rawProperty.id);
+    const success = await supabase.deleteProperty(user.id, rawProperty.id);
     if (success) {
-      window.location.href = "/dashboard"; // Redirect after successful deletion
+      window.location.href = "/app/properties";
     }
   };
 

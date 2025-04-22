@@ -42,11 +42,8 @@ export default function PropertyPage() {
         const supabase = await createSPASassClient();
 
         const rawProperty = await supabase.getProperty(user.id, id);
-        const [rawLease] = await supabase.getCurrentLeaseByProperty(id);
+        const rawLease = await supabase.getCurrentLeaseByProperty(id);
         const rawAddress = await supabase.getAddressForProperty(id);
-        const rawTenant = rawLease?.tenant_id
-          ? await supabase.getTenant(rawLease.tenant_id)
-          : undefined;
         const rawDocuments = await supabase.getDocumentsByProperty(id);
         const rawTransactions = await supabase.getTransactionsByProperty(id);
         const rawTasks = await supabase.getTasksByProperty(id);
@@ -55,7 +52,6 @@ export default function PropertyPage() {
           rawProperty,
           rawLease,
           rawAddress,
-          rawTenant,
           rawDocuments,
           rawTransactions,
           rawTasks,
@@ -91,9 +87,7 @@ export default function PropertyPage() {
     const rawProperty = await supabase.getProperty(user.id, id);
     const [rawLease] = await supabase.getCurrentLeaseByProperty(id);
     const rawAddress = await supabase.getAddressForProperty(id);
-    const rawTenant = rawLease?.tenant_id
-      ? await supabase.getTenant(rawLease.tenant_id)
-      : undefined;
+
     const rawDocuments = await supabase.getDocumentsByProperty(id);
     const rawTransactions = await supabase.getTransactionsByProperty(id);
     const rawTasks = await supabase.getTasksByProperty(id);
@@ -102,7 +96,6 @@ export default function PropertyPage() {
       rawProperty,
       rawLease,
       rawAddress,
-      rawTenant,
       rawDocuments,
       rawTransactions,
       rawTasks,
