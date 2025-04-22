@@ -121,18 +121,30 @@ export class SassClient {
 
   /* FILES & DOCUMENT METHODS */
   /* Storage Utility Methods */
-  private async uploadFileToStorage(
+  private async uploadToStorage(
     userId: string,
     file: File,
     propertyId?: string
   ): Promise<string> {
-    const filename = file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_");
+    const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Unsupported file type");
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      throw new Error("File exceeds 50MB limit");
+    }
+    if (!file.name) {
+      throw new Error("File name is required");
+    }
+    const filename = file.name
+      ? file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_")
+      : `file_${Date.now()}`;
     const child_folder = propertyId ?? "general";
     const fullpath = `${userId}/${child_folder}/${filename}`;
 
     const { error } = await this.client.storage
       .from(STORAGE_BUCKET)
-      .upload(fullpath, file);
+      .upload(fullpath, file, { upsert: false });
     handleSupabaseError(error);
 
     return fullpath;
@@ -156,26 +168,36 @@ export class SassClient {
     return data?.signedUrl ?? "";
   }
 
+  async getDocumentDownloadUrl(
+    fullpath: string,
+    expiresInSec: number = 60
+  ): Promise<string> {
+    const { data, error } = await this.client.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrl(fullpath, expiresInSec);
+    handleSupabaseError(error);
+    return data?.signedUrl || "";
+  }
+
   /* Document Table Methods */
-  private async createDocumentRecord(params: {
+  private async createDocumentEntry(params: {
     userId: string;
     propertyId?: string;
     file: File;
-    signedUrl: string;
     fullpath: string;
+    documentType?: string;
   }): Promise<DocumentRow> {
-    const { userId, propertyId, file, signedUrl, fullpath } = params;
+    const { userId, propertyId, file, fullpath } = params;
     const { data, error } = await this.client
       .from(DOCUMENTS_TABLE)
       .insert({
         property_id: propertyId ?? null,
         uploaded_by: userId,
         file_name: file.name,
-        file_url: signedUrl,
         file_size_kb: Math.round(file.size / 1024),
         mime_type: file.type,
-        document_type: "other",
-        storage_full_path: fullpath, // ← add this line
+        document_type: params.documentType ?? "other",
+        storage_full_path: fullpath,
       })
       .select()
       .single();
@@ -184,7 +206,7 @@ export class SassClient {
     return data;
   }
 
-  private async deleteDocumentRecord(documentId: string): Promise<void> {
+  private async removeDocumentEntry(documentId: string): Promise<void> {
     const { error } = await this.client
       .from(DOCUMENTS_TABLE)
       .delete()
@@ -196,35 +218,36 @@ export class SassClient {
   async uploadFile(
     userId: string,
     file: File,
-    propertyId?: string
+    propertyId?: string,
+    documentType?: string
   ): Promise<DocumentRow> {
-    const fullpath = await this.uploadFileToStorage(userId, file, propertyId);
-    const signedUrl = await this.generateSignedUrl(fullpath, 3600); // 1 hour
-    return await this.createDocumentRecord({
+    const fullpath = await this.uploadToStorage(userId, file, propertyId);
+    return await this.createDocumentEntry({
       userId,
       propertyId,
       file,
       fullpath,
-      signedUrl,
+      documentType,
     });
   }
 
-  async deleteDocument(documentId: string): Promise<boolean> {
+  async removeDocumentAndFile(documentId: string): Promise<boolean> {
     const { data, error } = await this.client
       .from(DOCUMENTS_TABLE)
-      .select("storage_full_path")
+      .select("storage_full_path, uploaded_by")
       .eq("id", documentId)
       .single();
     handleSupabaseError(error);
-    if (!data?.storage_full_path) {
-      throw new Error("File path not found");
-    }
+
+    if (!data?.storage_full_path) throw new Error("File path not found");
+    if (!data?.uploaded_by) throw new Error("Invalid user ownership");
+
     await this.deleteFileFromStorage(data.storage_full_path);
-    await this.deleteDocumentRecord(documentId);
+    await this.removeDocumentEntry(documentId);
     return true;
   }
 
-  async getFiles(
+  async listStorageFiles(
     userId: string,
     propertyId?: string
   ): Promise<{ data: any[] | null; error: PostgrestError | null }> {
@@ -248,6 +271,30 @@ export class SassClient {
     return this.client.storage
       .from(STORAGE_BUCKET)
       .createSignedUrl(fullPath, timeInSec, { download: forDownload });
+  }
+
+  async updateDocument(
+    documentId: string,
+    update: DocumentUpdate
+  ): Promise<DocumentRow | null> {
+    const { data, error } = await this.client
+      .from(DOCUMENTS_TABLE)
+      .update(update)
+      .eq("id", documentId)
+      .select()
+      .single();
+    handleSupabaseError(error);
+    return data;
+  }
+
+  async getDocumentsByProperty(propertyId: string): Promise<DocumentRow[]> {
+    const { data, error } = await this.client
+      .from(DOCUMENTS_TABLE)
+      .select("*")
+      .eq("property_id", propertyId)
+      .order("created_at", { ascending: false });
+    handleSupabaseError(error);
+    return data || [];
   }
 
   /* PROPERTIES METHODS */
@@ -318,7 +365,7 @@ export class SassClient {
   }
 
   /* LEASE METHODS */
-  async addLease(
+  async createLease(
     propertyId: string,
     lease: LeaseInsert
   ): Promise<LeaseRow | null> {
@@ -520,53 +567,6 @@ export class SassClient {
       .delete()
       .eq("id", taskId);
     handleSupabaseError(error);
-    return true;
-  }
-
-  /* DOCUMENT METHODS */
-  async getDocumentsByProperty(propertyId: string): Promise<DocumentRow[]> {
-    const { data, error } = await this.client
-      .from(DOCUMENTS_TABLE)
-      .select("*")
-      .eq("property_id", propertyId)
-      .order("created_at", { ascending: false });
-    handleSupabaseError(error);
-    return data || [];
-  }
-
-  async updateDocument(
-    documentId: string,
-    update: DocumentUpdate
-  ): Promise<DocumentRow | null> {
-    const { data, error } = await this.client
-      .from(DOCUMENTS_TABLE)
-      .update(update)
-      .eq("id", documentId)
-      .select()
-      .single();
-    handleSupabaseError(error);
-    return data;
-  }
-
-  async removeDocument(
-    userId: string,
-    propertyId: string,
-    documentId: string,
-    filename: string
-  ): Promise<boolean> {
-    const { error: storageError } = await this.deleteFile(
-      userId,
-      propertyId,
-      filename
-    );
-    handleSupabaseError(storageError);
-
-    const { error: dbError } = await this.client
-      .from(DOCUMENTS_TABLE)
-      .delete()
-      .eq("user_id", userId)
-      .eq("id", documentId);
-    handleSupabaseError(dbError);
     return true;
   }
 

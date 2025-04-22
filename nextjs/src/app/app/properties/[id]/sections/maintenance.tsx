@@ -35,12 +35,12 @@ export default function Maintenance({
   data: EnrichedProperty;
   refreshData: () => void;
 }) {
-  const [activeTab, setActiveTab] = useState("all");
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
   const [editTaskId, setEditTaskId] = useState<string | null>(null);
   const [editTaskData, setEditTaskData] = useState<any>(null);
   const [creatingTask, setCreatingTask] = useState(false);
   const [sortMode, setSortMode] = useState<"urgency" | "date">("date");
+  const [activeTab, setActiveTab] = useState("all");
 
   const { rawTasks } = data;
 

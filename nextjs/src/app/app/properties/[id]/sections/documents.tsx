@@ -19,6 +19,7 @@ import {
   CheckCircle,
   Copy,
   Pencil,
+  Eye,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -32,14 +33,7 @@ import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import { Database } from "@/lib/types";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];
 type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
@@ -113,13 +107,12 @@ export default function FileManagement({
   const handleDrag = useCallback((state: boolean) => {
     setIsDragging(state);
   }, []);
-
   const handleFileDelete = async () => {
     if (!fileToDelete || !user) return;
     try {
       setError("");
       const supabase = await createSPASassClient();
-      await supabase.deleteDocument(fileToDelete.id);
+      await supabase.removeDocumentAndFile(fileToDelete.id);
       await onRefresh();
       setSuccess("File deleted successfully");
     } catch (err) {
@@ -268,23 +261,61 @@ export default function FileManagement({
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
+
                       <button
-                        onClick={() => window.open(doc.file_url, "_blank")}
+                        onClick={async () => {
+                          const supabase = await createSPASassClient();
+                          const signedUrl =
+                            await supabase.getDocumentDownloadUrl(
+                              doc.storage_full_path,
+                              60
+                            );
+                          if (signedUrl) {
+                            window.open(signedUrl, "_blank");
+                          } else {
+                            setError("Failed to open document");
+                          }
+                        }}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
+                        title="Present"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          try {
+                            const supabase = await createSPASassClient();
+                            const { data, error } = await supabase.shareFile(
+                              user!.id,
+                              doc.file_name,
+                              60,
+                              true, // this ensures it's a downloadable link
+                              rawProperty?.id
+                            );
+
+                            if (!data?.signedUrl) {
+                              setError("Failed to generate download link");
+                              return;
+                            }
+
+                            const link = document.createElement("a");
+                            link.href = data.signedUrl;
+                            link.download = doc.file_name;
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                          } catch (err) {
+                            console.error("Download error:", err);
+                            setError("Failed to download file");
+                          }
+                        }}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
                         title="Download"
                       >
                         <Download className="h-4 w-4" />
                       </button>
-                      <button
-                        onClick={() => {
-                          setSelectedFile(doc.file_name);
-                          setShareUrl(doc.file_url);
-                        }}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-full"
-                        title="Share"
-                      >
-                        <Share2 className="h-4 w-4" />
-                      </button>
+
                       <button
                         onClick={() => {
                           setFileToDelete(doc);
@@ -302,6 +333,7 @@ export default function FileManagement({
           </div>
 
           {/* Dialogs */}
+
           {/* Share Dialog */}
           <Dialog
             open={!!shareUrl}

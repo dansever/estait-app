@@ -20,6 +20,7 @@ export type Database = {
           longitude: number | null
           state: string | null
           street: string | null
+          street_number: number | null
           updated_at: string
           zip_code: string | null
         }
@@ -33,6 +34,7 @@ export type Database = {
           longitude?: number | null
           state?: string | null
           street?: string | null
+          street_number?: number | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -46,6 +48,7 @@ export type Database = {
           longitude?: number | null
           state?: string | null
           street?: string | null
+          street_number?: number | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -57,7 +60,6 @@ export type Database = {
           document_type: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null
           file_name: string
           file_size_kb: number | null
-          file_url: string
           id: string
           lease_id: string | null
           mime_type: string
@@ -72,7 +74,6 @@ export type Database = {
           document_type?: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null
           file_name: string
           file_size_kb?: number | null
-          file_url: string
           id?: string
           lease_id?: string | null
           mime_type: string
@@ -87,7 +88,6 @@ export type Database = {
           document_type?: Database["public"]["Enums"]["DOCUMENT_TYPE"] | null
           file_name?: string
           file_size_kb?: number | null
-          file_url?: string
           id?: string
           lease_id?: string | null
           mime_type?: string

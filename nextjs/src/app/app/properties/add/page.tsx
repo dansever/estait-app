@@ -4,16 +4,18 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useGlobal } from "@/lib/context/GlobalContext";
-import { createSPASassClient } from "@/lib/supabase/client";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, AlertCircle } from "lucide-react";
+import { useGlobal } from "@/lib/context/GlobalContext";
+import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import { currencyList } from "@/lib/constants";
+import AddressInput from "@/components/property/GoogleAddressInput";
 
 export default function AddPropertyPage() {
   const { user } = useGlobal();
   const [form, setForm] = useState({
+    title: "",
     description: "",
     property_type: "house",
     purchase_price: 0,
@@ -25,11 +27,14 @@ export default function AddPropertyPage() {
     parking_spaces: 0,
     year_built: 0,
     street: "",
+    street_number: 0,
     apartment_number: "",
     city: "",
     state: "",
     country: "",
+    zip_code: "",
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -53,6 +58,19 @@ export default function AddPropertyPage() {
     }));
   };
 
+  const handleAddressSelect = (place: any) => {
+    setForm((prev) => ({
+      ...prev,
+      street: place.street || "",
+      street_number: place.street_number,
+      apartment_number: place.apartment_number || "",
+      city: place.city || "",
+      state: place.state || "",
+      country: place.country || "",
+      zip_code: place.zip_code || "",
+    }));
+  };
+
   const handleSubmit = async () => {
     if (!user) return;
     setLoading(true);
@@ -61,7 +79,26 @@ export default function AddPropertyPage() {
 
     try {
       const supabase = await createSPASassClient();
+      // 1. Create address first
+      const { data: address, error: addressError } = await supabase.client
+        .from("addresses")
+        .insert({
+          street: form.street,
+          street_number: form.street_number,
+          apartment_number: form.apartment_number,
+          city: form.city,
+          state: form.state,
+          country: form.country,
+          zip_code: form.zip_code,
+        })
+        .select()
+        .single();
+
+      if (addressError || !address?.id) throw addressError;
+
+      // 2. Then create property with address_id
       const newProperty = await supabase.createProperty(user.id, {
+        title: form.title,
         description: form.description,
         property_type: form.property_type,
         purchase_price: form.purchase_price,
@@ -72,21 +109,14 @@ export default function AddPropertyPage() {
         bathrooms: form.bathrooms,
         parking_spaces: form.parking_spaces,
         year_built: form.year_built,
+        address_id: address.id, // link property to address
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
 
-      await supabase.createAddress({
-        property_id: newProperty.id,
-        street: form.street,
-        apartment_number: form.apartment_number,
-        city: form.city,
-        state: form.state,
-        country: form.country,
-      });
-
       setSuccess(true);
       setForm({
+        title: "",
         description: "",
         property_type: "house",
         purchase_price: 0,
@@ -98,10 +128,12 @@ export default function AddPropertyPage() {
         parking_spaces: 0,
         year_built: 0,
         street: "",
+        street_number: "",
         apartment_number: "",
         city: "",
         state: "",
         country: "",
+        zip_code: "",
       });
     } catch (err) {
       console.error(err);
@@ -131,73 +163,136 @@ export default function AddPropertyPage() {
         </Alert>
       )}
 
-      {/* Property Form */}
       <Card>
         <CardHeader>
           <CardTitle>Property Details & Address</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {[
-            { label: "Description", name: "description", type: "text" },
-            {
-              label: "Property Type",
-              name: "property_type",
-              type: "select",
-              options: Constants.public.Enums.PROPERTY_TYPE,
-            },
-            { label: "Purchase Price", name: "purchase_price", type: "number" },
-            {
-              label: "Currency",
-              name: "currency",
-              type: "select",
-              options: currencyList().map((c) => c.code),
-            },
-            { label: "Size", name: "size", type: "number" },
-            {
-              label: "Unit System",
-              name: "unit_system",
-              type: "select",
-              options: ["metric", "imperial"],
-            },
-            { label: "Bedrooms", name: "bedrooms", type: "number" },
-            { label: "Bathrooms", name: "bathrooms", type: "number" },
-            { label: "Parking Spaces", name: "parking_spaces", type: "number" },
-            { label: "Year Built", name: "year_built", type: "number" },
-            { label: "Street", name: "street", type: "text" },
-            { label: "Apt. Number", name: "apartment_number", type: "text" },
-            { label: "City", name: "city", type: "text" },
-            { label: "State", name: "state", type: "text" },
-            { label: "Country", name: "country", type: "text" },
-          ].map((field) => (
-            <div key={field.name} className="flex flex-col">
-              <label htmlFor={field.name} className="text-sm font-medium mb-1">
-                {field.label}
-              </label>
-              {field.type === "select" ? (
-                <select
-                  id={field.name}
-                  name={field.name}
-                  value={form[field.name]}
-                  onChange={handleChange}
-                  className="border rounded px-3 py-2 text-sm"
-                >
-                  {field.options?.map((option) => (
-                    <option key={option} value={option}>
-                      {option.charAt(0).toUpperCase() + option.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type={field.type}
-                  value={form[field.name]}
-                  onChange={handleChange}
-                />
-              )}
-            </div>
-          ))}
+          <InputField
+            label="Title"
+            name="title"
+            value={form.title}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Description"
+            name="description"
+            value={form.description}
+            onChange={handleChange}
+          />
+          <SelectField
+            label="Property Type"
+            name="property_type"
+            value={form.property_type}
+            onChange={handleChange}
+            options={Constants.public.Enums.PROPERTY_TYPE}
+          />
+          <InputField
+            label="Purchase Price"
+            name="purchase_price"
+            type="number"
+            value={form.purchase_price}
+            onChange={handleChange}
+          />
+          <SelectField
+            label="Currency"
+            name="currency"
+            value={form.currency}
+            onChange={handleChange}
+            options={currencyList().map((c) => c.code)}
+          />
+          <InputField
+            label="Size"
+            name="size"
+            type="number"
+            value={form.size}
+            onChange={handleChange}
+          />
+          <SelectField
+            label="Unit System"
+            name="unit_system"
+            value={form.unit_system}
+            onChange={handleChange}
+            options={["metric", "imperial"]}
+          />
+          <InputField
+            label="Bedrooms"
+            name="bedrooms"
+            type="number"
+            value={form.bedrooms}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Bathrooms"
+            name="bathrooms"
+            type="number"
+            value={form.bathrooms}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Parking Spaces"
+            name="parking_spaces"
+            type="number"
+            value={form.parking_spaces}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Year Built"
+            name="year_built"
+            type="number"
+            value={form.year_built}
+            onChange={handleChange}
+          />
+
+          <AddressInput
+            name="Property Address"
+            defaultValue={form.street}
+            placeholder="Enter your property address"
+            required
+            onSelect={handleAddressSelect}
+          />
+          <InputField
+            label="Street"
+            name="streetr"
+            value={form.street}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Street Number"
+            name="street_number"
+            value={form.street_number}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Apt. Number"
+            name="apartment_number"
+            value={form.apartment_number}
+            onChange={handleChange}
+          />
+          <InputField
+            label="City"
+            name="city"
+            value={form.city}
+            onChange={handleChange}
+          />
+          <InputField
+            label="State"
+            name="state"
+            value={form.state}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Country"
+            name="country"
+            value={form.country}
+            onChange={handleChange}
+          />
+          <InputField
+            label="Zip Code"
+            name="zip_code"
+            value={form.zip_code}
+            onChange={handleChange}
+          />
         </CardContent>
       </Card>
 
@@ -206,6 +301,46 @@ export default function AddPropertyPage() {
           {loading ? "Saving..." : "Add Property"}
         </Button>
       </div>
+    </div>
+  );
+}
+
+function InputField({ label, name, value, onChange, type = "text" }: any) {
+  return (
+    <div className="flex flex-col">
+      <label htmlFor={name} className="text-sm font-medium mb-1">
+        {label}
+      </label>
+      <Input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+function SelectField({ label, name, value, onChange, options }: any) {
+  return (
+    <div className="flex flex-col">
+      <label htmlFor={name} className="text-sm font-medium mb-1">
+        {label}
+      </label>
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={onChange}
+        className="border rounded px-3 py-2 text-sm"
+      >
+        {options.map((opt: string) => (
+          <option key={opt} value={opt}>
+            {opt.charAt(0).toUpperCase() + opt.slice(1)}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
