@@ -103,15 +103,15 @@ export default function Maintenance({
   const saveEditTask = async (taskId: string) => {
     if (!editTaskData) return;
     const supabase = await createSPASassClient();
+    const { isNew, ...taskData } = editTaskData;
 
-    if (editTaskData.isNew) {
-      await supabase.addTask({
-        ...editTaskData,
-        property_id: data.rawProperty.id,
+    if (isNew) {
+      await supabase.addTask(data.rawProperty.id, {
+        ...taskData,
         task_status: "open",
       });
     } else {
-      await supabase.updateTask(taskId, editTaskData);
+      await supabase.updateTask(taskId, taskData);
     }
 
     setEditTaskId(null);
@@ -171,7 +171,7 @@ export default function Maintenance({
           <Button
             variant="outline"
             onClick={() => {
-              const id = `temp-${Date.now()}`; // temporary ID for local UI
+              const id = `temp-${Date.now()}`;
               setEditTaskId(id);
               setEditTaskData({
                 title: "New Task",
@@ -180,7 +180,7 @@ export default function Maintenance({
                 due_date: "",
                 isNew: true,
               });
-              setCreatingTask(true);
+              setCreatingTask(true); // last step
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -226,7 +226,7 @@ export default function Maintenance({
             </Button>
           </div>
 
-          {filteredTasks.length === 0 ? (
+          {filteredTasks.length === 0 && !creatingTask ? (
             <Card>
               <CardContent className="py-8 text-center text-gray-500">
                 No tasks found for this view.
@@ -234,7 +234,21 @@ export default function Maintenance({
             </Card>
           ) : (
             <div className="space-y-4">
-              {sortedTasks.map((task) => (
+              {[
+                ...(creatingTask
+                  ? [
+                      {
+                        id: editTaskId!,
+                        title: editTaskData?.title || "New Task",
+                        description: editTaskData?.description || "",
+                        priority: editTaskData?.priority || "medium",
+                        due_date: editTaskData?.due_date || "",
+                        task_status: "open",
+                      },
+                    ]
+                  : []),
+                ...sortedTasks,
+              ].map((task) => (
                 <Card
                   key={task.id}
                   className={`hover:shadow-md transition-shadow border-l-4 
@@ -372,7 +386,11 @@ export default function Maintenance({
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => setEditTaskId(null)}
+                            onClick={() => {
+                              setEditTaskId(null);
+                              setEditTaskData(null);
+                              setCreatingTask(false); // this hides the unsaved card
+                            }}
                           >
                             Cancel
                           </Button>

@@ -9,6 +9,8 @@ import { AlertCircle } from "lucide-react";
 import PropertyCard from "@/components/property/PropertyCard";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Button } from "@/components/ui/button";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle } from "lucide-react";
 
 // --- helper function ---
 const propertyCardProps = (property: EnrichedProperty) => ({
@@ -28,13 +30,22 @@ export default function PropertiesPage() {
   const { user, propertiesById, setPropertiesById } = useGlobal();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+  const searchParams = useSearchParams();
+  const showSuccess = searchParams.get("success") === "1";
+  const [visibleSuccess, setVisibleSuccess] = useState(showSuccess);
   const router = useRouter();
 
   useEffect(() => {
     if (!user?.id) return;
     fetchPropertiesAndDetails();
   }, [user]);
+
+  useEffect(() => {
+    if (showSuccess) {
+      const timeout = setTimeout(() => setVisibleSuccess(false), 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [showSuccess]);
 
   const fetchPropertiesAndDetails = async () => {
     try {
@@ -89,6 +100,15 @@ export default function PropertiesPage() {
       >
         Add New Property{" "}
       </Button>
+      {visibleSuccess && (
+        <Alert variant="success" className="mb-4">
+          <CheckCircle className="h-4 w-4 text-green-600" />
+          <AlertDescription className="text-green-700">
+            Property added successfully!
+          </AlertDescription>
+        </Alert>
+      )}
+
       {error && (
         <Alert variant="destructive" className="mb-4">
           <AlertCircle className="h-4 w-4" />

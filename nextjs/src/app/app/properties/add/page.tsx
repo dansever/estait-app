@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,7 @@ import AddressInput from "@/components/property/GoogleAddressInput";
 
 export default function AddPropertyPage() {
   const { user } = useGlobal();
+  const router = useRouter();
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -113,28 +115,7 @@ export default function AddPropertyPage() {
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
-
-      setSuccess(true);
-      setForm({
-        title: "",
-        description: "",
-        property_type: "house",
-        purchase_price: 0,
-        currency: "USD",
-        size: 0,
-        unit_system: "metric",
-        bedrooms: 0,
-        bathrooms: 0,
-        parking_spaces: 0,
-        year_built: 0,
-        street: "",
-        street_number: "",
-        apartment_number: "",
-        city: "",
-        state: "",
-        country: "",
-        zip_code: "",
-      });
+      router.push("/app/properties?success=1"); //  redirect after creation
     } catch (err) {
       console.error(err);
       setError("Failed to add property. Please try again.");

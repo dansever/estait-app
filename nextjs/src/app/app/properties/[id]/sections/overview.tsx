@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
+import { createSPASassClient } from "@/lib/supabase/client";
 
 export default function Overview({
   data,
@@ -15,13 +16,40 @@ export default function Overview({
   const { rawProperty, rawAddress } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
 
+  const onDeleteProperty = async () => {
+    const confirmed = confirm("Are you sure you want to delete this property?");
+    if (!confirmed) return;
+
+    const supabase = await createSPASassClient();
+    const client = supabase.getSupabaseClient();
+
+    // Get user
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+
+    if (!user) {
+      alert("User not authenticated.");
+      return;
+    }
+
+    const success = await supabase.removeProperty(user.id, rawProperty.id);
+    if (success) {
+      window.location.href = "/dashboard"; // Redirect after successful deletion
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
         <Button variant="outline" size="lg" onClick={() => setIsEditOpen(true)}>
           Edit
         </Button>
-        <Button variant="outlineDestructive" size="lg">
+        <Button
+          variant="outlineDestructive"
+          size="lg"
+          onClick={onDeleteProperty}
+        >
           Delete
         </Button>
       </div>
