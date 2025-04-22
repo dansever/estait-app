@@ -32,6 +32,14 @@ import { Badge } from "@/components/ui/badge";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import { Database } from "@/lib/types";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];
 type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
@@ -57,11 +65,14 @@ export default function FileManagement({
   const [editingDoc, setEditingDoc] = useState<DocumentRow | null>(null);
   const [updatedName, setUpdatedName] = useState("");
   const [updatedType, setUpdatedType] = useState<DocumentType>("other");
-  const [typeFilter, setTypeFilter] = useState<DocumentType | "all">("all");
+  const allTypes = Constants.public.Enums.DOCUMENT_TYPE;
+  const [selectedTypes, setSelectedTypes] = useState<DocumentType[]>([
+    ...allTypes,
+  ]);
 
   React.useEffect(() => {
     if (success) {
-      const timer = setTimeout(() => setSuccess(""), 8000); // 3 seconds
+      const timer = setTimeout(() => setSuccess(""), 8000);
       return () => clearTimeout(timer);
     }
   }, [success]);
@@ -73,8 +84,7 @@ export default function FileManagement({
 
       const supabase = await createSPASassClient();
       await supabase.uploadFile(user!.id, file, rawProperty?.id);
-      await onRefresh(); // refresh parent to get latest rawDocuments
-
+      await onRefresh();
       setSuccess("File uploaded successfully");
     } catch (err) {
       setError("Failed to upload file");
@@ -86,9 +96,7 @@ export default function FileManagement({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      handleFileUpload(file);
-    }
+    if (file) handleFileUpload(file);
     e.target.value = "";
   };
 
@@ -108,13 +116,10 @@ export default function FileManagement({
 
   const handleFileDelete = async () => {
     if (!fileToDelete || !user) return;
-
     try {
       setError("");
       const supabase = await createSPASassClient();
-
       await supabase.deleteDocument(fileToDelete.id);
-
       await onRefresh();
       setSuccess("File deleted successfully");
     } catch (err) {
@@ -135,6 +140,7 @@ export default function FileManagement({
             Upload and manage documents related to this property.
           </CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-6">
           {error && (
             <Alert variant="destructive">
@@ -142,7 +148,6 @@ export default function FileManagement({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-
           {success && (
             <Alert variant="success">
               <CheckCircle className="h-4 w-4 text-green-600" />
@@ -152,6 +157,7 @@ export default function FileManagement({
             </Alert>
           )}
 
+          {/* Upload Box */}
           <label
             className={`w-full flex flex-col items-center px-4 py-6 bg-white rounded-lg shadow-lg tracking-wide border-2 cursor-pointer transition-colors ${
               isDragging
@@ -185,29 +191,51 @@ export default function FileManagement({
               disabled={uploading}
             />
           </label>
-          <div className="flex items-center gap-2">
-            <label htmlFor="typeFilter" className="text-sm font-medium">
-              Filter by type:
-            </label>
-            <select
-              id="typeFilter"
-              value={typeFilter}
-              onChange={(e) =>
-                setTypeFilter(e.target.value as DocumentType | "all")
-              }
-              className="border rounded px-2 py-1 text-sm"
+
+          {/* Multi-select Filter */}
+          <div className="flex flex-wrap gap-2">
+            {/* "All" toggle */}
+            <Badge
+              onClick={() => setSelectedTypes([...allTypes])}
+              className={`cursor-pointer ${
+                selectedTypes.length === allTypes.length
+                  ? "bg-secondary text-secondary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
+              }`}
             >
-              <option value="all">All</option>
-              {Constants.public.Enums.DOCUMENT_TYPE.map((type) => (
-                <option key={type} value={type}>
-                  {type
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                </option>
-              ))}
-            </select>
+              All
+            </Badge>
+
+            {/* Individual type badges */}
+            {allTypes.map((type) => {
+              const isSelected = selectedTypes.includes(type);
+              const label = type
+                .replace(/_/g, " ")
+                .replace(/\b\w/g, (c) => c.toUpperCase());
+
+              return (
+                <Badge
+                  key={type}
+                  onClick={() =>
+                    setSelectedTypes((prev) =>
+                      isSelected
+                        ? prev.filter((t) => t !== type)
+                        : [...prev, type]
+                    )
+                  }
+                  className={`cursor-pointer transition ${
+                    isSelected
+                      ? "bg-secondary text-secondary-foreground"
+                      : "bg-muted text-muted-foreground hover:bg-accent"
+                  }`}
+                >
+                  {label}
+                </Badge>
+              );
+            })}
           </div>
 
+          {/* Document List */}
           <div className="space-y-4">
             {!rawDocuments || rawDocuments.length === 0 ? (
               <p className="text-center text-gray-500">
@@ -215,11 +243,8 @@ export default function FileManagement({
               </p>
             ) : (
               rawDocuments
-                .filter(
-                  (doc) =>
-                    typeFilter === "all" || doc.document_type === typeFilter
-                )
-                .map((doc: DocumentRow) => (
+                .filter((doc) => selectedTypes.includes(doc.document_type))
+                .map((doc) => (
                   <div
                     key={doc.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg border"
@@ -243,7 +268,6 @@ export default function FileManagement({
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
-
                       <button
                         onClick={() => window.open(doc.file_url, "_blank")}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-full"
@@ -277,6 +301,7 @@ export default function FileManagement({
             )}
           </div>
 
+          {/* Dialogs */}
           {/* Share Dialog */}
           <Dialog
             open={!!shareUrl}
@@ -321,34 +346,29 @@ export default function FileManagement({
                 <DialogTitle>Delete File</DialogTitle>
                 <DialogDescription>
                   Are you sure you want to delete{" "}
-                  <strong>{fileToDelete?.file_name}</strong>? This action cannot
-                  be undone.
+                  <strong>{fileToDelete?.file_name}</strong>?
                 </DialogDescription>
               </DialogHeader>
               <div className="flex justify-end gap-2 mt-4">
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => setShowDeleteDialog(false)}
-                  className="px-4 py-2 rounded border text-sm"
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={handleFileDelete}
-                  className="px-4 py-2 rounded bg-red-600 text-white text-sm hover:bg-red-700"
-                >
+                </Button>
+                <Button variant="destructive" onClick={handleFileDelete}>
                   Delete
-                </button>
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
 
-          {/* Edit Document Dialog */}
+          {/* Edit Dialog */}
           <Dialog open={!!editingDoc} onOpenChange={() => setEditingDoc(null)}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Edit Document</DialogTitle>
               </DialogHeader>
-
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
@@ -359,7 +379,6 @@ export default function FileManagement({
                       file_name: updatedName,
                       document_type: updatedType,
                     });
-
                     setSuccess("Document updated successfully");
                     setEditingDoc(null);
                     await onRefresh();
@@ -378,7 +397,6 @@ export default function FileManagement({
                     className="w-full border rounded px-2 py-1"
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium">
                     Document Type
@@ -390,7 +408,7 @@ export default function FileManagement({
                     }
                     className="w-full border rounded px-2 py-1"
                   >
-                    {Constants.public.Enums.DOCUMENT_TYPE.map((type) => (
+                    {allTypes.map((type) => (
                       <option key={type} value={type}>
                         {type
                           .replace(/_/g, " ")
@@ -399,21 +417,11 @@ export default function FileManagement({
                     ))}
                   </select>
                 </div>
-
                 <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingDoc(null)}
-                    className="px-4 py-2 rounded border"
-                  >
+                  <Button variant="outline" onClick={() => setEditingDoc(null)}>
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                  >
-                    Save
-                  </button>
+                  </Button>
+                  <Button type="submit">Save</Button>
                 </div>
               </form>
             </DialogContent>
