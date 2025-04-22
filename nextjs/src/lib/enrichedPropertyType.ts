@@ -7,6 +7,7 @@ export type TenantRow = Database["public"]["Tables"]["tenants"]["Row"];
 export type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
 export type TransactionRow =
   Database["public"]["Tables"]["transactions"]["Row"];
+export type TasksRow = Database["public"]["Tables"]["maintenance_tasks"]["Row"];
 
 export type EnrichedProperty = {
   rawProperty: PropertyRow;
@@ -15,4 +16,5 @@ export type EnrichedProperty = {
   rawTenant?: TenantRow;
   rawDocuments?: DocumentRow[];
   rawTransactions?: TransactionRow[];
+  rawTasks?: TasksRow[];
 };

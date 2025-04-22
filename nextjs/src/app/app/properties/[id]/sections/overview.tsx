@@ -5,7 +5,13 @@ import { formatCurrency } from "@/lib/formattingHelpers";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 
-export default function Overview({ data }: { data: EnrichedProperty }) {
+export default function Overview({
+  data,
+  refreshData,
+}: {
+  data: EnrichedProperty;
+  refreshData: () => void;
+}) {
   const { rawProperty, rawAddress } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
 
@@ -103,6 +109,7 @@ export default function Overview({ data }: { data: EnrichedProperty }) {
         data={data}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
+        onSave={refreshData} // pass refresh to dialog
       />
     </div>
   );

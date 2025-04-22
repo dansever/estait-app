@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,12 +21,14 @@ type EditPropertyDialogProps = {
   data: EnrichedProperty;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSave: () => void; // new
 };
 
 export default function EditPropertyDialog({
   data,
   open,
   onOpenChange,
+  onSave,
 }: EditPropertyDialogProps) {
   const [formData, setFormData] = React.useState({
     title: data.rawProperty.title || "",
@@ -103,6 +106,7 @@ export default function EditPropertyDialog({
       }
 
       // Optionally show success message here
+      await onSave(); // refetch full data
       onOpenChange(false);
     } catch (err) {
       console.error("Update failed:", err);
@@ -114,6 +118,9 @@ export default function EditPropertyDialog({
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Property</DialogTitle>
+          <DialogDescription>
+            Update property and address details.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-1 gap-6 py-4">

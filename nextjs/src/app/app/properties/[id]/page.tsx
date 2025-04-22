@@ -35,6 +35,7 @@ export default function PropertyPage() {
 
   useEffect(() => {
     if (!user?.id || typeof id !== "string") return;
+    console.log("Fetching property data for ID:", id);
 
     const fetchAllData = async () => {
       try {
@@ -141,18 +142,31 @@ export default function PropertyPage() {
           {
             id: "overview",
             label: "Overview",
-            content: <Overview data={propertyData} />,
+            content: (
+              <Overview
+                data={propertyData}
+                refreshData={refreshPropertyData} // pass refresh
+              />
+            ),
           },
           {
             id: "lease-tenants",
             label: "Lease & Tenants",
-            content: <LeaseTenants data={propertyData} />,
+            content: (
+              <LeaseTenants
+                data={propertyData}
+                refreshData={refreshPropertyData} // pass refresh
+              />
+            ),
           },
           {
             id: "documents",
             label: "Documents",
             content: (
-              <Documents data={propertyData} onRefresh={refreshPropertyData} />
+              <Documents
+                data={propertyData}
+                onRefresh={refreshPropertyData} // pass refresh
+              />
             ),
           },
           {
@@ -163,7 +177,12 @@ export default function PropertyPage() {
           {
             id: "maintenance",
             label: "Maintenance",
-            content: <Maintenance data={propertyData} />,
+            content: (
+              <Maintenance
+                data={propertyData}
+                refreshData={refreshPropertyData} // pass refresh
+              />
+            ),
           },
         ]}
       />
