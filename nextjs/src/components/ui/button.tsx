@@ -9,11 +9,14 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-primary-600 text-white hover:bg-primary-700",
-        destructive: "bg-danger-600 text-white hover:bg-danger-700",
+        default:
+          "border border-primary-500 bg-gradient-to-r from-primary-500 via-primary-600 to-primary-700 text-white hover:from-primary-600 hover:to-primary-800",
+        secondary:
+          "bg-gradient-to-r from-secondary-100 via-secondary-200 to-secondary-300 text-secondary-900 hover:from-secondary-200 hover:to-secondary-400",
+        destructive:
+          "border border-danger-600 bg-gradient-to-r from-danger-500 via-danger-600 to-danger-700 text-white hover:from-danger-600 hover:to-danger-800",
         outline:
           "border border-gray-300 bg-gray-100 hover:bg-gray-200 hover:text-headline",
-        secondary: "bg-secondary-200 text-secondary-900 hover:bg-secondary-400",
         outlineDestructive:
           "border border-danger-600 text-danger-600 bg-transparent hover:bg-danger-100",
         ghost: "hover:bg-muted hover:text-headline",

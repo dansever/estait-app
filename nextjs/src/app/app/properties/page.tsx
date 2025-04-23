@@ -3,9 +3,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Plus } from "lucide-react";
 import PropertyCard from "@/components/property/PropertyCard";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Button } from "@/components/ui/button";
@@ -87,19 +86,20 @@ export default function PropertiesPage() {
   };
 
   return (
-    <div className="space-y-6 p-6 bg-white rounded-lg shadow-md">
-      <Card>
-        <CardHeader>
-          <CardTitle>My Properties</CardTitle>
-        </CardHeader>
-      </Card>
-      <Button
-        variant={"secondary"}
-        size={"lg"}
-        onClick={() => router.push("/app/properties/add")}
-      >
-        Add New Property{" "}
-      </Button>
+    <div className="max-w-7xl mx-auto space-y-6 p-6 bg-white rounded-lg shadow-md">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-gray-900">My Properties</h1>
+        <Button
+          variant="default"
+          size="lg"
+          onClick={() => router.push("/app/properties/add")}
+          className="flex items-center gap-2 px-3 sm:px-5 max-w-full"
+        >
+          <Plus className="h-5 w-5" />
+          <span className="hidden sm:inline">Add New Property</span>
+        </Button>
+      </div>
+
       {visibleSuccess && (
         <Alert variant="success" className="mb-4">
           <CheckCircle className="h-4 w-4 text-green-600" />
@@ -117,11 +117,13 @@ export default function PropertiesPage() {
       )}
 
       {loading ? (
-        <p>Loading...</p>
+        <p className="text-center text-gray-500 text-sm italic">Loading...</p>
       ) : Object.keys(propertiesById).length === 0 ? (
-        <p className="text-gray-500 text-sm">No properties found.</p>
+        <p className="text-center text-gray-500 text-sm italic">
+          No properties found.
+        </p>
       ) : (
-        <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Object.values(propertiesById).map((property) => (
             <PropertyCard
               key={property.rawProperty.id}

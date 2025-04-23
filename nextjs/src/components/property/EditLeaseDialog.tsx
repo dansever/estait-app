@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,22 +17,22 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { currencyList } from "@/lib/constants";
 
-type EditLeaseTenantDialogProps = {
+type EditLeaseDialogProps = {
   data: EnrichedProperty;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: () => void;
 };
 
-export default function EditLeaseTenantDialog({
+export default function EditLeaseDialog({
   data,
   open,
   onOpenChange,
   onSave,
-}: EditLeaseTenantDialogProps) {
+}: EditLeaseDialogProps) {
   const lease = data.rawLease;
 
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState({
     rent_amount: lease?.rent_amount || 0,
     currency: lease?.currency || "USD",
     lease_start: lease?.lease_start || "",
@@ -46,6 +46,25 @@ export default function EditLeaseTenantDialog({
     email: lease?.tenant_email || "",
     phone: lease?.tenant_phone || "",
   });
+
+  useEffect(() => {
+    if (!data.rawLease) return;
+
+    setFormData({
+      rent_amount: data.rawLease.rent_amount || 0,
+      currency: data.rawLease.currency || "USD",
+      lease_start: data.rawLease.lease_start || "",
+      lease_end: data.rawLease.lease_end || "",
+      payment_frequency: data.rawLease.payment_frequency || "monthly",
+      payment_due_day: data.rawLease.payment_due_day || 1,
+      security_deposit: data.rawLease.security_deposit || 0,
+      is_lease_active: data.rawLease.is_lease_active ?? true,
+      first_name: data.rawLease.tenant_first_name || "",
+      last_name: data.rawLease.tenant_last_name || "",
+      email: data.rawLease.tenant_email || "",
+      phone: data.rawLease.tenant_phone || "",
+    });
+  }, [data.rawLease, open]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -86,10 +105,10 @@ export default function EditLeaseTenantDialog({
         is_lease_active: formData.is_lease_active,
 
         // tenant fields
-        first_name: formData.first_name,
-        last_name: formData.last_name,
-        email: formData.email,
-        phone: formData.phone,
+        tenant_first_name: formData.first_name,
+        tenant_last_name: formData.last_name,
+        tenant_email: formData.email,
+        tenant_phone: formData.phone,
       });
 
       await onSave();

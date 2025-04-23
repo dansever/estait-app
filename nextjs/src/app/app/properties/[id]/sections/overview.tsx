@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { formatCurrency } from "@/lib/formattingHelpers";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -42,7 +44,12 @@ export default function Overview({
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button variant="outline" size="lg" onClick={() => setIsEditOpen(true)}>
+        <Button
+          variant="secondary"
+          size="lg"
+          onClick={() => setIsEditOpen(true)}
+        >
+          <Pencil />
           Edit
         </Button>
         <Button
@@ -50,6 +57,7 @@ export default function Overview({
           size="lg"
           onClick={onDeleteProperty}
         >
+          <Trash2 />
           Delete
         </Button>
       </div>

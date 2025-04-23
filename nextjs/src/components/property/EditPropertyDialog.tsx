@@ -9,6 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
@@ -122,19 +123,20 @@ export default function EditPropertyDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
+      <DialogHeader>
+        <VisuallyHidden>
           <DialogTitle>Edit Property</DialogTitle>
-          <DialogDescription>
-            Update property and address details.
-          </DialogDescription>
-        </DialogHeader>
-
+          <DialogDescription>Edit property & address details</DialogDescription>
+        </VisuallyHidden>
+      </DialogHeader>
+      <DialogContent className="max-w-2xl">
         <div className="grid grid-cols-1 gap-6 py-4">
           {/* Property Details */}
           <Card>
             <CardContent className="pt-4">
-              <h3 className="text-lg font-semibold mb-4">Property Details</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Edit Property Details
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
@@ -156,7 +158,9 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Property Type
@@ -174,98 +178,6 @@ export default function EditPropertyDialog({
                     ))}
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Purchase Price
-                  </label>
-                  <div className="flex gap-2">
-                    <Input
-                      name="purchase_price"
-                      type="number"
-                      value={formData.purchase_price}
-                      onChange={handleChange}
-                      className="flex-1"
-                    />
-                    <select
-                      name="currency"
-                      value={formData.currency}
-                      onChange={handleChange}
-                      className="min-w-[100px] px-2 py-2 border rounded"
-                    >
-                      {currencyList().map((currency) => (
-                        <option key={currency.code} value={currency.code}>
-                          {currency.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Size</label>
-                  <div className="flex gap-2">
-                    <Input
-                      name="size"
-                      type="number"
-                      value={formData.size}
-                      onChange={handleChange}
-                      className="flex-1"
-                    />
-                    <select
-                      name="unit_system"
-                      value={formData.unit_system}
-                      onChange={handleChange}
-                      className="min-w-[100px] px-2 py-2 border rounded"
-                    >
-                      <option value="metric">m²</option>
-                      <option value="imperial">ft²</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Bedrooms
-                  </label>
-                  <Input
-                    name="bedrooms"
-                    type="number"
-                    value={formData.bedrooms}
-                    onChange={handleChange}
-                    step={0.5}
-                    min={0}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Bathrooms
-                  </label>
-                  <Input
-                    name="bathrooms"
-                    type="number"
-                    value={formData.bathrooms}
-                    onChange={handleChange}
-                    step={0.5}
-                    min={0}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Parking Spaces
-                  </label>
-                  <Input
-                    name="parking_spaces"
-                    type="number"
-                    value={formData.parking_spaces}
-                    onChange={handleChange}
-                    step={1}
-                    min={0}
-                  />
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Year Built
@@ -280,15 +192,100 @@ export default function EditPropertyDialog({
                   />
                 </div>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div className="flex gap-2">
+                  <Input
+                    name="purchase_price"
+                    type="number"
+                    value={formData.purchase_price}
+                    onChange={handleChange}
+                    className="flex-1"
+                  />
+                  <select
+                    name="currency"
+                    value={formData.currency}
+                    onChange={handleChange}
+                    className="min-w-[100px] px-2 py-2 border rounded"
+                  >
+                    {currencyList().map((currency) => (
+                      <option key={currency.code} value={currency.code}>
+                        {currency.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    name="size"
+                    type="number"
+                    value={formData.size}
+                    onChange={handleChange}
+                    className="flex-1"
+                  />
+                  <select
+                    name="unit_system"
+                    value={formData.unit_system}
+                    onChange={handleChange}
+                    className="min-w-[100px] px-2 py-2 border rounded"
+                  >
+                    <option value="metric">m²</option>
+                    <option value="imperial">ft²</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Bedrooms
+                  </label>
+                  <Input
+                    name="bedrooms"
+                    type="number"
+                    value={formData.bedrooms}
+                    onChange={handleChange}
+                    step={0.5}
+                    min={0}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Bathrooms
+                  </label>
+                  <Input
+                    name="bathrooms"
+                    type="number"
+                    value={formData.bathrooms}
+                    onChange={handleChange}
+                    step={0.5}
+                    min={0}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Parking Spaces
+                  </label>
+                  <Input
+                    name="parking_spaces"
+                    type="number"
+                    value={formData.parking_spaces}
+                    onChange={handleChange}
+                    step={1}
+                    min={0}
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 
           {/* Property Address */}
           <Card>
             <CardContent className="pt-4">
-              <h3 className="text-lg font-semibold mb-4">Property Address</h3>
+              <h3 className="text-lg font-semibold mb-4">
+                Edit Property Address
+              </h3>
 
-              {/* Google Autocomplete Input */}
               <AddressInput
                 name="Property Address"
                 defaultValue={formData.street}
@@ -308,9 +305,8 @@ export default function EditPropertyDialog({
                 }
               />
 
-              {/* Manual/Editable Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="md:col-span-1">
                   <label className="block text-sm font-medium mb-1">
                     Street
                   </label>
@@ -320,7 +316,6 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Street Number
@@ -331,7 +326,6 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Apt. Number
@@ -342,7 +336,9 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">City</label>
                   <Input
@@ -351,7 +347,6 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     State
@@ -362,7 +357,9 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Country
@@ -373,7 +370,6 @@ export default function EditPropertyDialog({
                     onChange={handleChange}
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Zip Code

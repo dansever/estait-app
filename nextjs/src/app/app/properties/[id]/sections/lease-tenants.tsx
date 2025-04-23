@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
 import { Button } from "@/components/ui/button";
-import EditPropertyDialog from "@/components/property/EditPropertyDialog";
+import EditLeaseDialog from "@/components/property/EditLeaseDialog";
+import AddLeaseDialog from "@/components/property/AddLeaseDialog";
 import { Progress } from "@/components/ui/progress";
 import { FaWhatsapp, FaPhone } from "react-icons/fa";
+import { Plus } from "lucide-react";
 import { MdOutlineMail } from "react-icons/md";
 import { differenceInDays, parseISO, format, isValid } from "date-fns";
-import EditLeaseTenantDialog from "@/components/property/EditLeaseTenantDialog";
 import { usePastLeases } from "@/components/property/usePastLeases";
 
 export default function LeaseTenants({
@@ -22,12 +23,10 @@ export default function LeaseTenants({
 }) {
   const { rawProperty, rawLease } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
   const { leases: pastLeases, loading: loadingPastLeases } = usePastLeases(
     rawProperty.id
   );
-
-  if (!rawLease) return null;
-
   const start = rawLease.lease_start ? parseISO(rawLease.lease_start) : null;
   const end = rawLease.lease_end ? parseISO(rawLease.lease_end) : null;
   const today = new Date();
@@ -35,8 +34,16 @@ export default function LeaseTenants({
     start && end && isValid(start) && isValid(end)
       ? differenceInDays(end, start)
       : 0;
-  const completedDays =
-    start && isValid(start) ? differenceInDays(today, start) : 0;
+  const completedDays = Math.max(
+    0,
+    start && isValid(start) ? differenceInDays(today, start) : 0
+  );
+
+  useEffect(() => {
+    if (isEditOpen || isAddOpen) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [isEditOpen, isAddOpen]);
 
   const percentComplete =
     totalDays > 0
@@ -46,7 +53,7 @@ export default function LeaseTenants({
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        {rawLease.is_lease_active ? (
+        {rawLease?.is_lease_active ? (
           <>
             <Button
               variant="outline"
@@ -58,24 +65,20 @@ export default function LeaseTenants({
             <Button
               variant="default"
               size="lg"
-              onClick={() => {
-                // TODO: Open add future lease dialog
-                alert("Coming soon: Add Future Lease");
-              }}
+              onClick={() => setIsAddOpen(true)}
             >
               Add Future Lease
             </Button>
           </>
         ) : (
           <Button
-            variant="default"
+            variant="secondary"
             size="lg"
-            onClick={() => {
-              // TODO: Open add lease dialog
-              alert("Coming soon: Add Lease");
-            }}
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-2 px-3 sm:px-5 max-w-full"
           >
-            Add Lease
+            <Plus className="h-5 w-5" />
+            <span className="hidden sm:inline">Add Lease</span>
           </Button>
         )}
       </div>
@@ -111,18 +114,22 @@ export default function LeaseTenants({
               {formatCurrency(rawLease.security_deposit, rawLease.currency)}
             </p>
             <p>
-              <strong>Start:</strong> {start ? format(start, "PPP") : "—"}
+              <strong>Start:</strong>{" "}
+              {start && isValid(start) ? format(start, "PPP") : "—"}
             </p>
             <p>
-              <strong>End:</strong> {end ? format(end, "PPP") : "—"}
+              <strong>End:</strong>{" "}
+              {end && isValid(end) ? format(end, "PPP") : "—"}
             </p>
             <div>
               <strong>Lease Progress:</strong>
               <Progress value={percentComplete} className="mt-1" />
               <p className="text-xs text-gray-500 mt-1">
-                {completedDays} of {totalDays} days (
-                {percentComplete.toFixed(0)}
-                %)
+                {start && today < start
+                  ? "Lease has not started yet"
+                  : `${completedDays} of ${totalDays} days (${percentComplete.toFixed(
+                      0
+                    )}%)`}
               </p>
             </div>
           </CardContent>
@@ -155,7 +162,12 @@ export default function LeaseTenants({
             {rawLease.tenant_phone && (
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <FaPhone className="h-4 w-4 text-gray-500" />
+                  <FaPhone
+                    className="h-4 w-4 text-gray-500"
+                    aria-hidden="true"
+                  />
+                  <span className="sr-only">Phone</span>
+
                   <a
                     href={`tel:${rawLease.tenant_phone}`}
                     className="text-blue-600 hover:underline"
@@ -163,20 +175,23 @@ export default function LeaseTenants({
                     {rawLease.tenant_phone}
                   </a>
                 </div>
-                <div className="flex items-center gap-2">
-                  <FaWhatsapp className="h-4 w-4 text-gray-500" />
-                  <a
-                    href={`https://wa.me/${rawLease.tenant_phone.replace(
-                      /\D/g,
-                      ""
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-600 hover:underline"
-                  >
-                    WhatsApp
-                  </a>
-                </div>
+                {typeof rawLease.tenant_phone === "string" &&
+                  rawLease.tenant_phone.replace(/\D/g, "").length > 5 && (
+                    <div className="flex items-center gap-2">
+                      <FaWhatsapp className="h-4 w-4 text-gray-500" />
+                      <a
+                        href={`https://wa.me/${rawLease.tenant_phone.replace(
+                          /\D/g,
+                          ""
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 hover:underline"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  )}
               </div>
             )}
           </CardContent>
@@ -245,8 +260,16 @@ export default function LeaseTenants({
         </CardContent>
       </Card>
 
-      {/* Edit Lease & Tenant Dialog */}
-      <EditLeaseTenantDialog
+      {/* Add & Edit Lease Dialogs */}
+      {/* Add Lease Dialog */}
+      <AddLeaseDialog
+        propertyId={rawProperty.id}
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
+        onSave={refreshData}
+      />
+
+      <EditLeaseDialog
         data={data}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
