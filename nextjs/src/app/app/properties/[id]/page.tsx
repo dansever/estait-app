@@ -18,9 +18,6 @@ import Financials from "./sections/financials";
 import Maintenance from "./sections/maintenance";
 import { Constants } from "@/lib/types";
 
-type PaymentFrequency =
-  (typeof Constants.public.Enums.PAYMENT_FREQUENCY)[number];
-
 export default function PropertyPage() {
   const { id } = useParams();
   const { user, propertiesById } = useGlobal();
@@ -81,13 +78,10 @@ export default function PropertyPage() {
 
   const refreshPropertyData = async () => {
     if (!user?.id || typeof id !== "string") return;
-
     const supabase = await createSPASassClient();
-
     const rawProperty = await supabase.getProperty(user.id, id);
-    const [rawLease] = await supabase.getCurrentLeaseByProperty(id);
+    const rawLease = await supabase.getCurrentLeaseByProperty(id);
     const rawAddress = await supabase.getAddressForProperty(id);
-
     const rawDocuments = await supabase.getDocumentsByProperty(id);
     const rawTransactions = await supabase.getTransactionsByProperty(id);
     const rawTasks = await supabase.getTasksByProperty(id);
@@ -119,7 +113,7 @@ export default function PropertyPage() {
               propertyData.rawLease?.rent_amount,
               propertyData.rawLease?.currency
             )}
-            / {formatPaymentFrequency(propertyData.rawLease?.payment_frequency)}
+            {formatPaymentFrequency(propertyData.rawLease?.payment_frequency)}
           </p>
           <p>
             <strong>Address:</strong>{" "}

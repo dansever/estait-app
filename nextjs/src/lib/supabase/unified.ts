@@ -395,14 +395,20 @@ export class SassClient {
     return data;
   }
 
-  async getCurrentLeaseByProperty(propertyId: string): Promise<LeaseRow[]> {
+  async getCurrentLeaseByProperty(
+    propertyId: string
+  ): Promise<LeaseRow | null> {
     const { data, error } = await this.client
       .from(LEASES_TABLE)
       .select("*")
       .eq("property_id", propertyId)
-      .eq("is_lease_active", true);
+      .eq("is_lease_active", true)
+      .limit(1)
+      .single();
+
     handleSupabaseError(error);
-    return data || [];
+    // console.log("[getCurrentLeaseByProperty]: Current lease data:", data);
+    return data || null;
   }
 
   async getPastLeasesByProperty(propertyId: string): Promise<LeaseRow[]> {

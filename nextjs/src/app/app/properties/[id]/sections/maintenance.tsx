@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
@@ -24,6 +25,7 @@ import {
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
+import MaintenanceTaskCard from "@/components/property/maintenance/MaintenanceTaskCard";
 
 export default function Maintenance({
   data,
@@ -171,13 +173,13 @@ export default function Maintenance({
               const id = `temp-${Date.now()}`;
               setEditTaskId(id);
               setEditTaskData({
-                title: "New Task",
+                title: "",
                 description: "",
                 priority: "medium",
                 due_date: "",
                 isNew: true,
               });
-              setCreatingTask(true); // last step
+              setCreatingTask(true);
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -246,156 +248,19 @@ export default function Maintenance({
                   : []),
                 ...sortedTasks,
               ].map((task) => (
-                <Card
+                <MaintenanceTaskCard
                   key={task.id}
-                  className={`hover:shadow-md transition-shadow border-l-4 
-                ${
-                  task.task_status === "completed"
-                    ? "border-l-green-500"
-                    : task.priority === "high"
-                    ? "border-l-red-500"
-                    : task.priority === "medium"
-                    ? "border-l-orange-500"
-                    : "border-l-gray-300"
-                }`}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-lg">{task.title}</h3>
-                          {getPriorityBadge(task.priority)}
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-gray-500 line-clamp-1">
-                            {task.description}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-2 mt-1">
-                          {getStatusBadge(task.task_status)}
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-2">
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Clock10 className="h-4 w-4" />
-                          {getRelativeTime(task.due_date)}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() =>
-                              toggleTaskStatus(task.id, task.task_status)
-                            }
-                            disabled={updatingTaskId === task.id}
-                          >
-                            <CheckCircle2
-                              className={`h-8 w-8 ${
-                                task.task_status === "completed"
-                                  ? "text-green-500"
-                                  : "text-gray-400"
-                              }`}
-                            />
-                          </Button>
-
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setEditTaskId(task.id);
-                              setEditTaskData({
-                                title: task.title,
-                                description: task.description || "",
-                                priority: task.priority || "medium",
-                                due_date: task.due_date || "",
-                              });
-                            }}
-                          >
-                            <Pencil className="h-4 w-4 text-gray-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteTask(task.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                    {editTaskId === task.id && (
-                      <div className="mt-4 space-y-2">
-                        <Input
-                          value={editTaskData?.title || ""}
-                          onChange={(e) =>
-                            setEditTaskData((prev) => ({
-                              ...prev!,
-                              title: e.target.value,
-                            }))
-                          }
-                          placeholder="Task title"
-                        />
-                        <Input
-                          value={editTaskData?.description || ""}
-                          onChange={(e) =>
-                            setEditTaskData((prev) => ({
-                              ...prev!,
-                              description: e.target.value,
-                            }))
-                          }
-                          placeholder="Description"
-                        />
-                        <div className="flex gap-4">
-                          <select
-                            value={editTaskData?.priority}
-                            onChange={(e) =>
-                              setEditTaskData((prev) => ({
-                                ...prev!,
-                                priority: e.target.value,
-                              }))
-                            }
-                            className="border rounded px-2 py-1"
-                          >
-                            {Constants.public.Enums.PRIORITY.map((p) => (
-                              <option key={p} value={p}>
-                                {p.charAt(0).toUpperCase() + p.slice(1)}
-                              </option>
-                            ))}
-                          </select>
-                          <Input
-                            type="date"
-                            value={editTaskData?.due_date || ""}
-                            onChange={(e) =>
-                              setEditTaskData((prev) => ({
-                                ...prev!,
-                                due_date: e.target.value,
-                              }))
-                            }
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => saveEditTask(task.id)}
-                          >
-                            Save
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditTaskId(null);
-                              setEditTaskData(null);
-                              setCreatingTask(false); // this hides the unsaved card
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                  task={task}
+                  editTaskId={editTaskId}
+                  editTaskData={editTaskData}
+                  updatingTaskId={updatingTaskId}
+                  setEditTaskId={setEditTaskId}
+                  setEditTaskData={setEditTaskData}
+                  toggleTaskStatus={toggleTaskStatus}
+                  deleteTask={deleteTask}
+                  saveEditTask={saveEditTask}
+                  setCreatingTask={setCreatingTask}
+                />
               ))}
             </div>
           )}

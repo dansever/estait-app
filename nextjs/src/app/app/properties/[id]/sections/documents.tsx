@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import {
@@ -13,7 +13,6 @@ import {
 import {
   Upload,
   Download,
-  Share2,
   Trash2,
   AlertCircle,
   CheckCircle,
@@ -34,6 +33,7 @@ import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import { Database } from "@/lib/types";
 import { Button } from "@/components/ui/button";
+import LoadingThreeDotsJumping from "@/components/general/LoadingJumpingDots";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];
 type DocumentRow = Database["public"]["Tables"]["documents"]["Row"];
@@ -63,6 +63,7 @@ export default function FileManagement({
   const [selectedTypes, setSelectedTypes] = useState<DocumentType[]>([
     ...allTypes,
   ]);
+  const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
     if (success) {
@@ -74,6 +75,7 @@ export default function FileManagement({
   const handleFileUpload = async (file: File) => {
     try {
       setUploading(true);
+      setLoading(true);
       setError("");
 
       const supabase = await createSPASassClient();
@@ -85,6 +87,7 @@ export default function FileManagement({
       console.error("Upload error:", err);
     } finally {
       setUploading(false);
+      setLoading(false);
     }
   };
 
@@ -110,6 +113,7 @@ export default function FileManagement({
   const handleFileDelete = async () => {
     if (!fileToDelete || !user) return;
     try {
+      setLoading(true);
       setError("");
       const supabase = await createSPASassClient();
       await supabase.deleteDocumentAndFile(fileToDelete.id);
@@ -119,6 +123,7 @@ export default function FileManagement({
       console.error("Delete error:", err);
       setError("Failed to delete file");
     } finally {
+      setLoading(false);
       setShowDeleteDialog(false);
       setFileToDelete(null);
     }
@@ -148,6 +153,13 @@ export default function FileManagement({
                 {success}
               </AlertDescription>
             </Alert>
+          )}
+          {loading && (
+            <div className="fixed inset-0 z-50 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+              <div className="pointer-events-none">
+                <LoadingThreeDotsJumping />
+              </div>
+            </div>
           )}
 
           {/* Upload Box */}
@@ -242,12 +254,15 @@ export default function FileManagement({
                     key={doc.id}
                     className="flex items-center justify-between p-4 bg-white rounded-lg border"
                   >
-                    <div className="flex flex-col text-sm">
+                    <div className="flex flex-col text-sm space-y-2">
                       <span className="font-medium">{doc.file_name}</span>
-                      <span className="text-xs text-gray-500">
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
                         <Badge variant="secondary">{doc.document_type}</Badge>
-                        Uploaded at {new Date(doc.created_at).toLocaleString()}
-                      </span>
+                        <span>
+                          Uploaded at{" "}
+                          {new Date(doc.created_at).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button

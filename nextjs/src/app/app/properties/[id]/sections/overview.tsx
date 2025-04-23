@@ -44,11 +44,7 @@ export default function Overview({
   return (
     <div className="space-y-4">
       <div className="flex justify-end gap-2">
-        <Button
-          variant="secondary"
-          size="lg"
-          onClick={() => setIsEditOpen(true)}
-        >
+        <Button variant="outline" size="lg" onClick={() => setIsEditOpen(true)}>
           <Pencil />
           Edit
         </Button>

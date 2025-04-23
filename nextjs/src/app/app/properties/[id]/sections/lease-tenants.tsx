@@ -5,11 +5,11 @@ import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
 import { Button } from "@/components/ui/button";
-import EditLeaseDialog from "@/components/property/EditLeaseDialog";
-import AddLeaseDialog from "@/components/property/AddLeaseDialog";
+import EditLeaseDialog from "@/components/property/lease/EditLeaseDialog";
+import AddLeaseDialog from "@/components/property/lease/AddLeaseDialog";
 import { Progress } from "@/components/ui/progress";
 import { FaWhatsapp, FaPhone } from "react-icons/fa";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, CalendarClock } from "lucide-react";
 import { MdOutlineMail } from "react-icons/md";
 import { differenceInDays, parseISO, format, isValid } from "date-fns";
 import { usePastLeases } from "@/components/property/usePastLeases";
@@ -60,13 +60,15 @@ export default function LeaseTenants({
               size="lg"
               onClick={() => setIsEditOpen(true)}
             >
+              <Pencil />
               Edit Lease
             </Button>
             <Button
-              variant="default"
+              variant="outline"
               size="lg"
               onClick={() => setIsAddOpen(true)}
             >
+              <CalendarClock />
               Add Future Lease
             </Button>
           </>
@@ -261,7 +263,6 @@ export default function LeaseTenants({
       </Card>
 
       {/* Add & Edit Lease Dialogs */}
-      {/* Add Lease Dialog */}
       <AddLeaseDialog
         propertyId={rawProperty.id}
         open={isAddOpen}
