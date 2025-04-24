@@ -404,10 +404,9 @@ export class SassClient {
       .eq("property_id", propertyId)
       .eq("is_lease_active", true)
       .limit(1)
-      .single();
+      .maybeSingle();
 
     handleSupabaseError(error);
-    // console.log("[getCurrentLeaseByProperty]: Current lease data:", data);
     return data || null;
   }
 

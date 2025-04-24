@@ -1,15 +1,18 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { Menu, ChevronDown, LogOut } from "lucide-react";
+import Image from "next/image";
+import { Menu, LogOut } from "lucide-react";
+import { BsStars } from "react-icons/bs";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import AppSidebar from "./layout/AppSidebar";
-import SearchBar from "./layout/SearchBar";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -27,6 +30,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isUserDropdownOpen]);
+
+  // Add keyboard shortcut functionality (press / to focus)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.key === "/" &&
+        document.activeElement?.tagName !== "INPUT" &&
+        document.activeElement?.tagName !== "TEXTAREA"
+      ) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   const { user } = useGlobal();
 
@@ -74,7 +94,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <Menu className="h-6 w-6" />
           </button>
 
-          <SearchBar />
+          {/* Enhanced Search Bar */}
+          <div className="relative flex-grow max-w-2xl mx-4">
+            <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+              <BsStars size={18} />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="search"
+              placeholder="Ask anything... (Press / to focus)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="search-input"
+            />
+          </div>
 
           <div className="relative ml-auto">
             <button
@@ -83,13 +116,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
               className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
             >
-              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
-                <span className="text-primary-700 font-medium">
-                  {user ? getInitials(user.email) : "??"}
+              {user?.full_name && (
+                <span className="font-medium text-sm mr-2">
+                  Hello {user.full_name.split(" ")[0]}
                 </span>
-              </div>
+              )}
 
-              {/* <ChevronDown className="h-4 w-4" /> */}
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                {user?.avatarUrl ? (
+                  <Image
+                    src={user.avatarUrl}
+                    alt="User avatar"
+                    width={40}
+                    height={40}
+                    className="rounded-full object-cover w-full h-full"
+                  />
+                ) : (
+                  <span className="text-primary-700 font-medium">
+                    {user ? getInitials(user.email) : "??"}
+                  </span>
+                )}
+              </div>
             </button>
 
             {isUserDropdownOpen && (

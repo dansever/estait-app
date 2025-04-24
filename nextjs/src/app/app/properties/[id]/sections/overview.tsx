@@ -3,7 +3,19 @@ import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { formatCurrency } from "@/lib/formattingHelpers";
-import { Pencil, Trash2 } from "lucide-react";
+import {
+  Pencil,
+  Trash2,
+  Home,
+  MapPin,
+  Bed,
+  Bath,
+  Car,
+  Calendar,
+  Ruler,
+  Badge,
+  Info,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 import { createSPASassClient } from "@/lib/supabase/client";
@@ -42,94 +54,235 @@ export default function Overview({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex justify-end gap-2">
-        <Button variant="outline" size="lg" onClick={() => setIsEditOpen(true)}>
-          <Pencil />
-          Edit
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsEditOpen(true)}
+          className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+        >
+          <Pencil className="h-4 w-4 text-gray-500" />
+          <span>Edit Property</span>
         </Button>
         <Button
-          variant="outlineDestructive"
-          size="lg"
+          variant="outline"
+          size="sm"
           onClick={onDeleteProperty}
+          className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-danger transition-all duration-200"
         >
-          <Trash2 />
-          Delete
+          <Trash2 className="h-4 w-4 text-danger" />
+          <span>Delete</span>
         </Button>
       </div>
 
-      {/* Cards grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Property Overview Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Property Overview</CardTitle>
+      {/* Cards grid with consistent styling */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Property Overview Card - Redesigned */}
+        <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
+              <Home className="h-5 w-5 text-primary-500" />
+              Property Overview
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-gray-700">
-            <p>
-              <strong>Description:</strong> {rawProperty.description || "—"}
-            </p>
-            <p>
-              <strong>Type:</strong> {rawProperty.property_type || "—"}
-            </p>
-            <p>
-              <strong>Purchase Price: </strong>
+          <CardContent>
+            <div className="space-y-4">
+              {rawProperty.description && (
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-gray-700 italic">
+                      {rawProperty.description}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-              {formatCurrency(rawProperty.purchase_price, rawProperty.currency)}
-            </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Badge className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Property Type
+                    </p>
+                    <p className="text-sm font-medium">
+                      {rawProperty.property_type || "Not specified"}
+                    </p>
+                  </div>
+                </div>
 
-            <p>
-              <strong>Size:</strong>{" "}
-              {rawProperty.size
-                ? `${rawProperty.size} ${
-                    rawProperty.unit_system === "metric" ? "m²" : "sq ft"
-                  }`
-                : "N/A"}
-            </p>
-            <p>
-              <strong>Bedrooms:</strong> {rawProperty.bedrooms ?? "N/A"}
-            </p>
-            <p>
-              <strong>Bathrooms:</strong> {rawProperty.bathrooms ?? "N/A"}
-            </p>
-            <p>
-              <strong>Parking Spaces:</strong> {rawProperty.parking_spaces ?? 0}
-            </p>
-            <p>
-              <strong>Year Built:</strong> {rawProperty.year_built ?? "N/A"}
-            </p>
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Ruler className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Size</p>
+                    <p className="text-sm font-medium">
+                      {rawProperty.size
+                        ? `${rawProperty.size} ${
+                            rawProperty.unit_system === "metric"
+                              ? "m²"
+                              : "sq ft"
+                          }`
+                        : "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Bed className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Bedrooms
+                    </p>
+                    <p className="text-sm font-medium">
+                      {rawProperty.bedrooms ?? "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Bath className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Bathrooms
+                    </p>
+                    <p className="text-sm font-medium">
+                      {rawProperty.bathrooms ?? "Not specified"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Car className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">Parking</p>
+                    <p className="text-sm font-medium">
+                      {(rawProperty.parking_spaces ?? 0) > 0
+                        ? `${rawProperty.parking_spaces} spot${
+                            rawProperty.parking_spaces > 1 ? "s" : ""
+                          }`
+                        : "No parking"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <div>
+                    <p className="text-xs font-medium text-gray-500">
+                      Year Built
+                    </p>
+                    <p className="text-sm font-medium">
+                      {rawProperty.year_built ?? "Not specified"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-2 flex items-start gap-3 p-3 rounded-lg bg-primary-50 border border-primary-100">
+                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-5 w-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M14 11c5.333 0 5.333-8 0-8" />
+                    <path d="M6 11h8" />
+                    <path d="M6 15h8" />
+                    <path d="M9 19l3 -3" />
+                    <path d="M9 19l3 3" />
+                    <path d="M3 3v18h18" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-primary-600">
+                    Purchase Price
+                  </p>
+                  <p className="text-base font-semibold text-primary-700">
+                    {formatCurrency(
+                      rawProperty.purchase_price,
+                      rawProperty.currency
+                    )}
+                  </p>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Property Address Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Property Address</CardTitle>
+        {/* Property Address Card - Redesigned */}
+        <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
+              <MapPin className="h-5 w-5 text-primary-500" />
+              Property Location
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm text-gray-700">
-            <p>
-              <strong>Address:</strong>{" "}
-              {rawAddress
-                ? `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
-                : "Not set"}
-            </p>
+          <CardContent className="space-y-4">
+            {rawAddress ? (
+              <>
+                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                  <div className="flex items-start gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary-100 flex-shrink-0 flex items-center justify-center text-primary-600">
+                      <MapPin className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 mb-1">
+                        Full Address
+                      </p>
+                      <p className="text-sm font-medium">
+                        {`${rawAddress.street}`}
+                      </p>
+                      <p className="text-sm font-medium">
+                        {`${rawAddress.city}, ${rawAddress.country}`}
+                      </p>
+                      {rawAddress.state && (
+                        <p className="text-sm font-medium">
+                          {rawAddress.state}
+                        </p>
+                      )}
+                      {rawAddress.postal_code && (
+                        <p className="text-sm font-medium">
+                          {rawAddress.postal_code}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
-            {rawAddress && (
-              <div className="mt-2 rounded-lg overflow-hidden shadow-md border">
-                <iframe
-                  title="Property Location"
-                  width="100%"
-                  height="250"
-                  loading="lazy"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  referrerPolicy="no-referrer-when-downgrade"
-                  src={`https://www.google.com/maps/embed/v1/place?key=${
-                    process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-                  }&q=${encodeURIComponent(
-                    `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
-                  )}`}
-                />
+                <div className="mt-2 rounded-xl overflow-hidden shadow-md border-0">
+                  <iframe
+                    title="Property Location"
+                    width="100%"
+                    height="250"
+                    loading="lazy"
+                    style={{ border: 0 }}
+                    allowFullScreen
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src={`https://www.google.com/maps/embed/v1/place?key=${
+                      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+                    }&q=${encodeURIComponent(
+                      `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
+                    )}`}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+                  <MapPin className="h-8 w-8" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-500">
+                  No Address Information
+                </h3>
+                <p className="text-sm text-gray-400 mt-1">
+                  Add an address to display the location
+                </p>
               </div>
             )}
           </CardContent>

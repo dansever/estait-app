@@ -57,7 +57,7 @@ export default function PropertiesPage() {
 
       for (const property of propertiesList) {
         try {
-          const [lease] = await supabase.getCurrentLeaseByProperty(property.id);
+          const lease = await supabase.getCurrentLeaseByProperty(property.id);
           const address = await supabase.getAddressForProperty(property.id);
 
           enriched[property.id] = {

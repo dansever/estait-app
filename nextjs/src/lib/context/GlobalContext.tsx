@@ -9,6 +9,8 @@ type User = {
   email: string;
   id: string;
   registered_at: Date;
+  avatarUrl?: string;
+  full_name?: string;
 };
 
 interface GlobalContextType {
@@ -44,6 +46,8 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
             email: user.email!,
             id: user.id,
             registered_at: new Date(user.created_at),
+            avatarUrl: user.user_metadata?.avatar_url ?? undefined,
+            full_name: user.user_metadata?.full_name ?? undefined,
           });
         } else {
           throw new Error("User not found");

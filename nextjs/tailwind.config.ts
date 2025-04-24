@@ -9,6 +9,11 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["Nunito", "ui-sans-serif", "system-ui"],
+        heading: ["Montserrat", "ui-sans-serif", "system-ui"],
+      },
+
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

@@ -10,7 +10,8 @@ export type TasksRow = Database["public"]["Tables"]["maintenance_tasks"]["Row"];
 
 export type EnrichedProperty = {
   rawProperty: PropertyRow;
-  rawLease?: LeaseRow;
+  rawLease?: LeaseRow | null;
+  rawPastLeases?: LeaseRow[];
   rawAddress?: AddressRow;
   rawDocuments?: DocumentRow[];
   rawTransactions?: TransactionRow[];

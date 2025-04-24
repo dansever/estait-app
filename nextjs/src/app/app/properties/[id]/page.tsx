@@ -16,7 +16,6 @@ import LeaseTenants from "./sections/lease-tenants";
 import Documents from "./sections/documents";
 import Financials from "./sections/financials";
 import Maintenance from "./sections/maintenance";
-import { Constants } from "@/lib/types";
 
 export default function PropertyPage() {
   const { id } = useParams();
@@ -40,6 +39,7 @@ export default function PropertyPage() {
 
         const rawProperty = await supabase.getProperty(user.id, id);
         const rawLease = await supabase.getCurrentLeaseByProperty(id);
+        const rawPastLeases = await supabase.getPastLeasesByProperty(id);
         const rawAddress = await supabase.getAddressForProperty(id);
         const rawDocuments = await supabase.getDocumentsByProperty(id);
         const rawTransactions = await supabase.getTransactionsByProperty(id);
@@ -48,6 +48,7 @@ export default function PropertyPage() {
         setPropertyData({
           rawProperty,
           rawLease,
+          rawPastLeases,
           rawAddress,
           rawDocuments,
           rawTransactions,
@@ -81,6 +82,7 @@ export default function PropertyPage() {
     const supabase = await createSPASassClient();
     const rawProperty = await supabase.getProperty(user.id, id);
     const rawLease = await supabase.getCurrentLeaseByProperty(id);
+    const rawPastLeases = await supabase.getPastLeasesByProperty(id);
     const rawAddress = await supabase.getAddressForProperty(id);
     const rawDocuments = await supabase.getDocumentsByProperty(id);
     const rawTransactions = await supabase.getTransactionsByProperty(id);
@@ -89,6 +91,7 @@ export default function PropertyPage() {
     setPropertyData({
       rawProperty,
       rawLease,
+      rawPastLeases,
       rawAddress,
       rawDocuments,
       rawTransactions,
