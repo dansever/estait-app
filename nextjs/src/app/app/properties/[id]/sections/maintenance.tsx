@@ -8,13 +8,11 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   LayoutList,
@@ -26,10 +24,8 @@ import {
   AlertTriangle,
   Search,
   Info,
-  X,
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
-import { Constants } from "@/lib/types";
 import MaintenanceTaskCard from "@/components/property/maintenance/MaintenanceTaskCard";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -39,7 +35,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Maintenance({
@@ -185,26 +180,24 @@ export default function Maintenance({
                 Manage tasks and maintenance requests for this property
               </CardDescription>
             </div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={() => {
-                  const id = `temp-${Date.now()}`;
-                  setEditTaskId(id);
-                  setEditTaskData({
-                    title: "",
-                    description: "",
-                    priority: "medium",
-                    due_date: "",
-                    isNew: true,
-                  });
-                  setCreatingTask(true);
-                }}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add New Task
-              </Button>
-            </motion.div>
+            <Button
+              onClick={() => {
+                const id = `temp-${Date.now()}`;
+                setEditTaskId(id);
+                setEditTaskData({
+                  title: "",
+                  description: "",
+                  priority: "medium",
+                  due_date: "",
+                  isNew: true,
+                });
+                setCreatingTask(true);
+              }}
+              variant={"default"}
+            >
+              <Plus />
+              Add New Task
+            </Button>
           </div>
         </CardHeader>
 

@@ -44,7 +44,7 @@ export default function EditAddLeaseDialog({
 
   // This ensures we collect all leases that are not the one being edited
   const allOtherLeases = [
-    ...rawPastLeases,
+    ...(rawPastLeases || []),
     ...(rawActiveLease ? [rawActiveLease] : []),
   ].filter((l) => l.id !== leaseToEdit?.id);
 

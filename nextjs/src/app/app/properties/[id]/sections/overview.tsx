@@ -12,14 +12,24 @@ import {
   Car,
   Calendar,
   Ruler,
-  Badge,
   Info,
   Copy,
   Check,
+  Boxes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
 import { createSPASassClient } from "@/lib/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import LoadingThreeDotsJumping from "@/components/general/LoadingJumpingDots";
 
 export default function Overview({
   data,
@@ -30,27 +40,35 @@ export default function Overview({
 }) {
   const { rawProperty, rawAddress } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const onDeleteProperty = async () => {
-    const confirmed = confirm("Are you sure you want to delete this property?");
-    if (!confirmed) return;
+    setIsDeleting(true);
+    try {
+      const supabase = await createSPASassClient();
+      const client = supabase.getSupabaseClient();
 
-    const supabase = await createSPASassClient();
-    const client = supabase.getSupabaseClient();
+      // Get user
+      const {
+        data: { user },
+      } = await client.auth.getUser();
 
-    // Get user
-    const {
-      data: { user },
-    } = await client.auth.getUser();
+      if (!user) {
+        alert("User not authenticated.");
+        setIsDeleting(false);
+        return;
+      }
 
-    if (!user) {
-      alert("User not authenticated.");
-      return;
-    }
-
-    const success = await supabase.deleteProperty(user.id, rawProperty.id);
-    if (success) {
-      window.location.href = "/app/properties";
+      const success = await supabase.deleteProperty(user.id, rawProperty.id);
+      if (success) {
+        window.location.href = "/app/properties";
+      } else {
+        setIsDeleting(false);
+      }
+    } catch (error) {
+      console.error("Error deleting property:", error);
+      setIsDeleting(false);
     }
   };
 
@@ -131,26 +149,57 @@ export default function Overview({
 
   return (
     <div className="space-y-6">
+      {isDeleting && (
+        <div className="fixed inset-0 z-50 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="pointer-events-none p-0 m-0 bg-transparent shadow-none border-none">
+            <LoadingThreeDotsJumping />
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsEditOpen(true)}
-          className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
-        >
-          <Pencil className="h-4 w-4 text-gray-500" />
+        <Button variant="default" onClick={() => setIsEditOpen(true)}>
+          <Pencil className="text-white" />
           <span>Edit Property</span>
         </Button>
         <Button
-          variant="outline"
-          size="sm"
-          onClick={onDeleteProperty}
-          className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-danger transition-all duration-200"
+          variant="outlineDestructive"
+          onClick={() => setIsDeleteDialogOpen(true)}
         >
           <Trash2 className="h-4 w-4 text-danger" />
           <span>Delete</span>
         </Button>
       </div>
+
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete "
+              {rawProperty.title || "this property"}" and all associated data.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              onClick={onDeleteProperty}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <LoadingThreeDotsJumping className="text-white" />
+              ) : (
+                "Delete"
+              )}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Cards grid with consistent styling */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -177,7 +226,7 @@ export default function Overview({
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Badge className="h-5 w-5 text-gray-400 mt-0.5" />
+                  <Boxes className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
                     <p className="text-xs font-medium text-gray-500">
                       Property Type
@@ -195,9 +244,7 @@ export default function Overview({
                     <p className="text-sm font-medium">
                       {rawProperty.size
                         ? `${rawProperty.size} ${
-                            rawProperty.unit_system === "metric"
-                              ? "m²"
-                              : "sq ft"
+                            rawProperty.unit_system === "metric" ? "m²" : "f²"
                           }`
                         : "Not specified"}
                     </p>

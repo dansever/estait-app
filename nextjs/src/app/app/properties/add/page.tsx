@@ -1,12 +1,30 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, AlertCircle } from "lucide-react";
+import {
+  CheckCircle,
+  AlertCircle,
+  Building,
+  MapPin,
+  Home,
+  Ruler,
+  Calendar,
+  User,
+  DollarSign,
+  Car,
+  Toilet,
+} from "lucide-react";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
@@ -20,16 +38,16 @@ export default function AddPropertyPage() {
     title: "",
     description: "",
     property_type: "house",
-    purchase_price: 0,
+    purchase_price: "",
     currency: "USD",
-    size: 0,
+    size: "",
     unit_system: "metric",
-    bedrooms: 0,
-    bathrooms: 0,
-    parking_spaces: 0,
-    year_built: 0,
+    bedrooms: "",
+    bathrooms: "",
+    parking_spaces: 0, // Not nullable, default to 0 as per schema
+    year_built: "",
     street: "",
-    street_number: 0,
+    street_number: "",
     apartment_number: "",
     city: "",
     state: "",
@@ -40,6 +58,30 @@ export default function AddPropertyPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [activeSection, setActiveSection] = useState("details");
+  const [validationErrors, setValidationErrors] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  // Auto-dismiss error messages after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
+  // Auto-dismiss success messages after 5 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess(false);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -71,10 +113,47 @@ export default function AddPropertyPage() {
       country: place.country || "",
       zip_code: place.zip_code || "",
     }));
+    setActiveSection("address");
+  };
+
+  const validateForm = (): boolean => {
+    const errors: { [key: string]: boolean } = {};
+    let isValid = true;
+
+    // Check required fields
+    if (!form.title) {
+      errors.title = true;
+      isValid = false;
+    }
+
+    if (!form.property_type) {
+      errors.property_type = true;
+      isValid = false;
+    }
+
+    // Validate address fields
+    if (!form.street || !form.city || !form.country) {
+      errors.address = true;
+      isValid = false;
+    }
+
+    setValidationErrors(errors);
+
+    if (!isValid) {
+      setError("Please fill out all required fields before submitting.");
+    }
+
+    return isValid;
   };
 
   const handleSubmit = async () => {
     if (!user) return;
+
+    // Validate form before proceeding
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
     setError("");
     setSuccess(false);
@@ -103,15 +182,18 @@ export default function AddPropertyPage() {
         title: form.title,
         description: form.description,
         property_type: form.property_type,
-        purchase_price: form.purchase_price,
         currency: form.currency,
         size: form.size,
         unit_system: form.unit_system,
-        bedrooms: form.bedrooms,
-        bathrooms: form.bathrooms,
-        parking_spaces: form.parking_spaces,
-        year_built: form.year_built,
-        address_id: address.id, // link property to address
+        address_id: address.id,
+        purchase_price:
+          form.purchase_price === "" ? null : Number(form.purchase_price),
+        size: form.size === "" ? null : Number(form.size),
+        bedrooms: form.bedrooms === "" ? null : Number(form.bedrooms),
+        bathrooms: form.bathrooms === "" ? null : Number(form.bathrooms),
+        parking_spaces:
+          form.parking_spaces === "" ? 0 : Number(form.parking_spaces), // not nullable
+        year_built: form.year_built === "" ? null : Number(form.year_built),
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
@@ -124,19 +206,26 @@ export default function AddPropertyPage() {
     }
   };
 
+  const getCurrencySymbol = (currencyCode: string) => {
+    const currency = currencyList().find((c) => c.code === currencyCode);
+    return currency ? currency.symbol : "$";
+  };
+
   return (
-    <div className="max-w-2xl mx-auto py-10 space-y-6">
-      <h1 className="text-2xl font-semibold">Add New Property</h1>
+    <div className="w-full py-10 px-4 md:px-6">
+      <h1 className="text-3xl font-heading font-semibold text-primary-800 mb-8">
+        Add New Property
+      </h1>
 
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="mb-6">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
       {success && (
-        <Alert variant="success">
+        <Alert className="mb-6 bg-green-50 border-green-200">
           <CheckCircle className="h-4 w-4 text-green-600" />
           <AlertDescription className="text-green-700">
             Property added successfully!
@@ -144,185 +233,569 @@ export default function AddPropertyPage() {
         </Alert>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Property Details & Address</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <InputField
-            label="Title"
-            name="title"
-            value={form.title}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Description"
-            name="description"
-            value={form.description}
-            onChange={handleChange}
-          />
-          <SelectField
-            label="Property Type"
-            name="property_type"
-            value={form.property_type}
-            onChange={handleChange}
-            options={Constants.public.Enums.PROPERTY_TYPE}
-          />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Sidebar with steps */}
+        <div className="lg:col-span-1">
+          <div className="sticky top-24 space-y-4">
+            <Card
+              className={`cursor-pointer transition-all ${
+                activeSection === "details"
+                  ? "border-primary-400 shadow-md bg-primary-50"
+                  : "hover:border-gray-300 hover:shadow-sm"
+              }`}
+              onClick={() => setActiveSection("details")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`p-2.5 rounded-full ${
+                      activeSection === "details"
+                        ? "bg-primary-200 text-primary-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    <Building className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p
+                      className={`font-medium ${
+                        activeSection === "details"
+                          ? "text-primary-800"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      Property Details
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Basic information, type & features
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-          <InputField
-            label="Purchase Price"
-            name="purchase_price"
-            type="number"
-            value={form.purchase_price}
-            onChange={handleChange}
-          />
-          <SelectField
-            label="Currency"
-            name="currency"
-            value={form.currency}
-            onChange={handleChange}
-            options={currencyList().map((c) => c.code)}
-          />
-          <InputField
-            label="Size"
-            name="size"
-            type="number"
-            value={form.size}
-            onChange={handleChange}
-          />
-          <SelectField
-            label="Unit System"
-            name="unit_system"
-            value={form.unit_system}
-            onChange={handleChange}
-            options={["metric", "imperial"]}
-          />
-          <InputField
-            label="Bedrooms"
-            name="bedrooms"
-            type="number"
-            value={form.bedrooms}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Bathrooms"
-            name="bathrooms"
-            type="number"
-            value={form.bathrooms}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Parking Spaces"
-            name="parking_spaces"
-            type="number"
-            value={form.parking_spaces}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Year Built"
-            name="year_built"
-            type="number"
-            value={form.year_built}
-            onChange={handleChange}
-          />
+            <Card
+              className={`cursor-pointer transition-all ${
+                activeSection === "address"
+                  ? "border-primary-400 shadow-md bg-primary-50"
+                  : "hover:border-gray-300 hover:shadow-sm"
+              }`}
+              onClick={() => setActiveSection("address")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  <div
+                    className={`p-2.5 rounded-full ${
+                      activeSection === "address"
+                        ? "bg-primary-200 text-primary-700"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p
+                      className={`font-medium ${
+                        activeSection === "address"
+                          ? "text-primary-800"
+                          : "text-gray-700"
+                      }`}
+                    >
+                      Location & Address
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Where your property is located
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-          <AddressInput
-            name="Property Address"
-            defaultValue={form.street}
-            placeholder="Enter your property address"
-            required
-            onSelect={handleAddressSelect}
-          />
-          <InputField
-            label="Street"
-            name="streetr"
-            value={form.street}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Street Number"
-            name="street_number"
-            value={form.street_number}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Apt. Number"
-            name="apartment_number"
-            value={form.apartment_number}
-            onChange={handleChange}
-          />
-          <InputField
-            label="City"
-            name="city"
-            value={form.city}
-            onChange={handleChange}
-          />
-          <InputField
-            label="State"
-            name="state"
-            value={form.state}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Country"
-            name="country"
-            value={form.country}
-            onChange={handleChange}
-          />
-          <InputField
-            label="Zip Code"
-            name="zip_code"
-            value={form.zip_code}
-            onChange={handleChange}
-          />
-        </CardContent>
-      </Card>
+        {/* Main form */}
+        <div className="lg:col-span-2">
+          {activeSection === "details" && (
+            <Card className="border-0 shadow-md overflow-hidden bg-white">
+              <CardHeader className="border-b bg-gradient-to-r from-primary-50 to-secondary-50 pb-4">
+                <CardTitle className="text-xl flex items-center gap-2 text-primary-800">
+                  <Building className="h-5 w-5 text-primary-600" />
+                  Property Details
+                </CardTitle>
+                <CardDescription>
+                  Enter the basic information about your property
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-700 border-b pb-2">
+                    Basic Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                      label="Property Title"
+                      name="title"
+                      value={form.title}
+                      onChange={handleChange}
+                      placeholder="Beach House, Downtown Apartment, etc."
+                      icon={<Home className="h-4 w-4 text-gray-400" />}
+                      required
+                      error={validationErrors.title}
+                    />
+                    <SelectField
+                      label="Property Type"
+                      name="property_type"
+                      value={form.property_type}
+                      onChange={handleChange}
+                      options={Constants.public.Enums.PROPERTY_TYPE}
+                      icon={<Building className="h-4 w-4 text-gray-400" />}
+                      required
+                      error={validationErrors.property_type}
+                    />
+                  </div>
+                  <div className="col-span-full">
+                    <TextareaField
+                      label="Description"
+                      name="description"
+                      value={form.description}
+                      onChange={handleChange}
+                      placeholder="Describe your property..."
+                    />
+                  </div>
+                </div>
 
-      <div className="flex justify-end">
-        <Button onClick={handleSubmit} disabled={loading}>
-          {loading ? "Saving..." : "Add Property"}
-        </Button>
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-700 border-b pb-2">
+                    Property Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex space-x-3">
+                      <div className="flex-1">
+                        <div className="flex flex-col space-y-1.5">
+                          <label
+                            htmlFor="purchase_price"
+                            className="text-sm font-medium text-gray-700"
+                          >
+                            Purchase Price
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500">
+                                {getCurrencySymbol(form.currency)}
+                              </span>
+                            </div>
+                            <Input
+                              id="purchase_price"
+                              name="purchase_price"
+                              type="number"
+                              value={form.purchase_price}
+                              onChange={handleChange}
+                              className="pl-7"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-1/3">
+                        <SelectField
+                          label="Currency"
+                          name="currency"
+                          value={form.currency}
+                          onChange={handleChange}
+                          options={currencyList().map((c) => c.code)}
+                          labelFormatter={(code) => {
+                            const currency = currencyList().find(
+                              (c) => c.code === code
+                            );
+                            return currency ? currency.label : code;
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex space-x-3">
+                      <div className="flex-1">
+                        <div className="flex flex-col space-y-1.5">
+                          <label
+                            htmlFor="size"
+                            className="text-sm font-medium text-gray-700"
+                          >
+                            Property Size
+                          </label>
+                          <div className="relative">
+                            <Input
+                              id="size"
+                              name="size"
+                              type="number"
+                              value={form.size}
+                              onChange={handleChange}
+                              className={`${
+                                form.unit_system === "metric" ? "pr-8" : "pr-10"
+                              }`}
+                              placeholder="0"
+                            />
+                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                              <span className="text-gray-500">
+                                {form.unit_system === "metric" ? "m²" : "ft²"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="w-1/3">
+                        <SelectField
+                          label="Unit"
+                          name="unit_system"
+                          value={form.unit_system}
+                          onChange={handleChange}
+                          options={["metric", "imperial"]}
+                          labelFormatter={(opt) =>
+                            opt === "metric" ? "m²" : "ft²"
+                          }
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-700 border-b pb-2">
+                    Features
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="flex flex-col space-y-1.5">
+                      <label
+                        htmlFor="bedrooms"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Bedrooms
+                      </label>
+                      <div className="relative">
+                        {form.bedrooms !== "" && (
+                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            <User className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                        <Input
+                          id="bedrooms"
+                          name="bedrooms"
+                          type="number"
+                          value={form.bedrooms === 0 ? "" : form.bedrooms}
+                          onChange={handleChange}
+                          className={form.bedrooms !== "" ? "pl-10" : ""}
+                          placeholder="0"
+                          step="0.5"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-1.5">
+                      <label
+                        htmlFor="bathrooms"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Bathrooms
+                      </label>
+                      <div className="relative">
+                        {form.bathrooms !== "" && (
+                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            <Toilet className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                        <Input
+                          id="bathrooms"
+                          name="bathrooms"
+                          type="number"
+                          value={form.bathrooms === 0 ? "" : form.bathrooms}
+                          onChange={handleChange}
+                          className={form.bathrooms !== "" ? "pl-10" : ""}
+                          placeholder="0"
+                          step="0.5"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-1.5">
+                      <label
+                        htmlFor="parking_spaces"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Parking Spaces
+                      </label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                          <Car className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <Input
+                          id="parking_spaces"
+                          name="parking_spaces"
+                          type="number"
+                          value={form.parking_spaces}
+                          onChange={handleChange}
+                          className="pl-10"
+                          placeholder="0"
+                          step="1"
+                          min="0"
+                          required
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col space-y-1.5">
+                      <label
+                        htmlFor="year_built"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Year Built
+                      </label>
+                      <div className="relative">
+                        {form.year_built !== "" && (
+                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                            <Calendar className="h-4 w-4 text-gray-400" />
+                          </div>
+                        )}
+                        <Input
+                          id="year_built"
+                          name="year_built"
+                          type="number"
+                          value={form.year_built === 0 ? "" : form.year_built}
+                          onChange={handleChange}
+                          className={form.year_built !== "" ? "pl-10" : ""}
+                          placeholder="0"
+                          step="1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-between">
+                  <div></div>
+                  <Button
+                    onClick={() => setActiveSection("address")}
+                    className="gap-2"
+                    size="lg"
+                  >
+                    Continue to Address
+                    <MapPin className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {activeSection === "address" && (
+            <Card className="border-0 shadow-md overflow-hidden bg-white">
+              <CardHeader className="border-b bg-gradient-to-r from-primary-50 to-secondary-50 pb-4">
+                <CardTitle className="text-xl flex items-center gap-2 text-primary-800">
+                  <MapPin className="h-5 w-5 text-primary-600" />
+                  Property Location
+                </CardTitle>
+                <CardDescription>
+                  Enter the address details of your property
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-700 border-b pb-2">
+                    Search Address
+                  </h3>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                    <AddressInput
+                      name="Property Address"
+                      defaultValue={form.street}
+                      placeholder="Start typing your property address..."
+                      required
+                      onSelect={handleAddressSelect}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-md font-medium text-gray-700 border-b pb-2">
+                    Address Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <InputField
+                      label="Street"
+                      name="street"
+                      value={form.street}
+                      onChange={handleChange}
+                      required
+                      error={validationErrors.address}
+                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <InputField
+                        label="Street Number"
+                        name="street_number"
+                        value={form.street_number}
+                        onChange={handleChange}
+                      />
+                      <InputField
+                        label="Apt. Number"
+                        name="apartment_number"
+                        value={form.apartment_number}
+                        onChange={handleChange}
+                      />
+                    </div>
+                    <InputField
+                      label="City"
+                      name="city"
+                      value={form.city}
+                      onChange={handleChange}
+                      required
+                      error={validationErrors.address}
+                    />
+                    <InputField
+                      label="State/Province"
+                      name="state"
+                      value={form.state}
+                      onChange={handleChange}
+                    />
+                    <InputField
+                      label="Country"
+                      name="country"
+                      value={form.country}
+                      onChange={handleChange}
+                      required
+                      error={validationErrors.address}
+                    />
+                    <InputField
+                      label="Zip/Postal Code"
+                      name="zip_code"
+                      value={form.zip_code}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-between">
+                  <Button
+                    variant="outline"
+                    onClick={() => setActiveSection("details")}
+                    className="gap-2 border-gray-200"
+                  >
+                    <Building className="h-4 w-4 mr-1" />
+                    Back to Details
+                  </Button>
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={loading}
+                    className="gap-2 bg-primary-600 hover:bg-primary-700"
+                    size="lg"
+                  >
+                    {loading ? "Saving..." : "Add Property"}
+                    {!loading && <CheckCircle className="h-4 w-4 ml-1" />}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-function InputField({ label, name, value, onChange, type = "text" }: any) {
+function InputField({
+  label,
+  name,
+  value,
+  onChange,
+  type = "text",
+  placeholder = "",
+  icon = null,
+  required = false,
+  error = false,
+}: any) {
   return (
-    <div className="flex flex-col">
-      <label htmlFor={name} className="text-sm font-medium mb-1">
-        {label}
+    <div className="flex flex-col space-y-1.5">
+      <label htmlFor={name} className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
       </label>
-      <Input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-      />
+      <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+            {icon}
+          </div>
+        )}
+        <Input
+          id={name}
+          name={name}
+          type={type}
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          className={`${icon ? "pl-10" : ""} ${
+            error ? "border-red-500 bg-red-50" : ""
+          }`}
+        />
+      </div>
     </div>
   );
 }
 
-function SelectField({ label, name, value, onChange, options }: any) {
+function SelectField({
+  label,
+  name,
+  value,
+  onChange,
+  options,
+  icon = null,
+  required = false,
+  error = false,
+  labelFormatter = (opt: string) =>
+    opt.charAt(0).toUpperCase() + opt.slice(1).replace(/_/g, " "),
+}: any) {
   return (
-    <div className="flex flex-col">
-      <label htmlFor={name} className="text-sm font-medium mb-1">
+    <div className="flex flex-col space-y-1.5">
+      <label htmlFor={name} className="text-sm font-medium text-gray-700">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+            {icon}
+          </div>
+        )}
+        <select
+          id={name}
+          name={name}
+          value={value}
+          onChange={onChange}
+          className={`w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
+            icon ? "pl-10" : ""
+          } ${error ? "border-red-500 bg-red-50" : ""}`}
+        >
+          {options.map((opt: string) => (
+            <option key={opt} value={opt}>
+              {labelFormatter(opt)}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+}
+
+function TextareaField({
+  label,
+  name,
+  value,
+  onChange,
+  placeholder = "",
+}: any) {
+  return (
+    <div className="flex flex-col space-y-1.5">
+      <label htmlFor={name} className="text-sm font-medium text-gray-700">
         {label}
       </label>
-      <select
+      <textarea
         id={name}
         name={name}
         value={value}
         onChange={onChange}
-        className="border rounded px-3 py-2 text-sm"
-      >
-        {options.map((opt: string) => (
-          <option key={opt} value={opt}>
-            {opt.charAt(0).toUpperCase() + opt.slice(1)}
-          </option>
-        ))}
-      </select>
+        placeholder={placeholder}
+        rows={3}
+        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[80px]"
+      />
     </div>
   );
 }

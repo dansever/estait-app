@@ -161,12 +161,8 @@ export default function LeaseTenants({
             </Button>
           </>
         ) : (
-          <Button
-            className="gap-2 bg-primary-600 hover:bg-primary-700 text-white shadow-sm transition-all duration-200"
-            size="sm"
-            onClick={() => setIsAddOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
+          <Button variant="default" onClick={() => setIsAddOpen(true)}>
+            <Plus className="text-white" />
             <span>Add Lease</span>
           </Button>
         )}

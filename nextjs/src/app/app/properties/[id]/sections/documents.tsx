@@ -52,7 +52,6 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from "motion/react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { DocumentRow } from "@/lib/enrichedPropertyType";
 
 type DocumentType = (typeof Constants.public.Enums.DOCUMENT_TYPE)[number];
@@ -274,8 +273,8 @@ export default function FileManagement({
               onClick={() =>
                 document.getElementById("fileInputMobile")?.click()
               }
-              className="w-full relative overflow-hidden group transition-all"
-              leftIcon={<Upload className="h-4 w-4" />}
+              variant="default"
+              leftIcon={<Upload />}
             >
               Upload Document
               <input

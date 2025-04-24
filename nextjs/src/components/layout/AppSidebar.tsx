@@ -2,16 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  X,
-  Home,
-  Building,
-  Search,
-  UploadCloud,
-  Table2,
-  Settings,
-  Component,
-} from "lucide-react";
+import { X, Home, Building, Table2, Settings, Component } from "lucide-react";
+import { FaMagic } from "react-icons/fa";
 
 type SidebarTab = {
   name: string;
@@ -28,7 +20,7 @@ interface AppSidebarProps {
 const sidebarTabs: SidebarTab[] = [
   { name: "Homepage", href: "/app", icon: Home },
   { name: "Properties", href: "/app/properties", icon: Building },
-  { name: "AI Search", href: "/app/ai-search", icon: Search },
+  { name: "AI Search", href: "/app/ai-search", icon: FaMagic },
   { name: "Table", href: "/app/table", icon: Table2 },
   { name: "Settings", href: "/app/settings", icon: Settings },
   { name: "Components", href: "/app/z-components", icon: Component },

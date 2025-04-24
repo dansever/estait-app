@@ -10,13 +10,13 @@ import { Loader2 } from "lucide-react";
 import { LeaseRow } from "@/lib/enrichedPropertyType";
 
 export type LeaseFormData = {
-  rent_amount: string;
+  rent_amount: number | "";
   currency: string;
   lease_start: string;
   lease_end: string;
   payment_frequency: string;
   payment_due_day: number;
-  security_deposit: number;
+  security_deposit: number | "";
   is_lease_active: boolean;
   first_name: string;
   last_name: string;
@@ -53,7 +53,7 @@ export default function LeaseForm({
       lease_end: "",
       payment_frequency: "monthly",
       payment_due_day: 1,
-      security_deposit: 0,
+      security_deposit: "",
       is_lease_active: true,
       first_name: "",
       last_name: "",

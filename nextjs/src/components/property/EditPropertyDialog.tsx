@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useState, ChangeEvent } from "react";
 import {
   Dialog,
   DialogContent,
@@ -32,18 +32,12 @@ export default function EditPropertyDialog({
   onOpenChange,
   onSave,
 }: EditPropertyDialogProps) {
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState({
     title: data.rawProperty.title || "",
     description: data.rawProperty.description || "",
     property_type: data.rawProperty.property_type || "other",
-    purchase_price: data.rawProperty.purchase_price || 0,
     currency: data.rawProperty.currency || "USD",
-    size: Math.max(0, data.rawProperty.size || 0),
     unit_system: data.rawProperty.unit_system || "metric",
-    bedrooms: Math.max(0, data.rawProperty.bedrooms || 0),
-    bathrooms: Math.max(0, data.rawProperty.bathrooms || 0),
-    parking_spaces: Math.max(0, data.rawProperty.parking_spaces || 0),
-    year_built: Math.max(0, Number(data.rawProperty.year_built)) || 0,
     street: data.rawAddress?.street || "",
     street_number: data.rawAddress?.street_number || "",
     apartment_number: data.rawAddress?.apartment_number || "",
@@ -51,24 +45,23 @@ export default function EditPropertyDialog({
     state: data.rawAddress?.state || "",
     country: data.rawAddress?.country || "",
     zip_code: data.rawAddress?.zip_code || "",
+
+    purchase_price: data.rawProperty.purchase_price ?? "",
+    size: data.rawProperty.size ?? "",
+    bedrooms: data.rawProperty.bedrooms ?? "",
+    bathrooms: data.rawProperty.bathrooms ?? "",
+    parking_spaces: data.rawProperty.parking_spaces ?? 0, // not nullable
+    year_built: data.rawProperty.year_built ?? "",
   });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+
     setFormData((prev) => ({
       ...prev,
-      [name]: [
-        "purchase_price",
-        "size",
-        "bedrooms",
-        "bathrooms",
-        "parking_spaces",
-        "year_built",
-      ].includes(name)
-        ? Math.max(0, Number(value))
-        : value,
+      [name]: value,
     }));
   };
 
@@ -80,13 +73,20 @@ export default function EditPropertyDialog({
         title: formData.title,
         description: formData.description,
         property_type: formData.property_type,
-        purchase_price: Number(formData.purchase_price),
         currency: formData.currency,
-        size: Number(formData.size),
-        bedrooms: Number(formData.bedrooms),
-        bathrooms: Number(formData.bathrooms),
-        parking_spaces: Number(formData.parking_spaces),
-        year_built: Number(formData.year_built),
+        unit_system: formData.unit_system,
+        purchase_price:
+          formData.purchase_price === ""
+            ? null
+            : Number(formData.purchase_price),
+        size: formData.size === "" ? null : Number(formData.size),
+        bedrooms: formData.bedrooms === "" ? null : Number(formData.bedrooms),
+        bathrooms:
+          formData.bathrooms === "" ? null : Number(formData.bathrooms),
+        parking_spaces:
+          formData.parking_spaces === "" ? 0 : Number(formData.parking_spaces), // not nullable
+        year_built:
+          formData.year_built === "" ? null : Number(formData.year_built),
       };
 
       const addressUpdate = {
@@ -119,6 +119,11 @@ export default function EditPropertyDialog({
     } catch (err) {
       console.error("Update failed:", err);
     }
+  };
+
+  const getCurrencySymbol = (currencyCode: string) => {
+    const currency = currencyList().find((c) => c.code === currencyCode);
+    return currency ? currency.symbol : "";
   };
 
   return (
@@ -194,44 +199,70 @@ export default function EditPropertyDialog({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div className="flex gap-2">
-                  <Input
-                    name="purchase_price"
-                    type="number"
-                    value={formData.purchase_price}
-                    onChange={handleChange}
-                    className="flex-1"
-                  />
-                  <select
-                    name="currency"
-                    value={formData.currency}
-                    onChange={handleChange}
-                    className="min-w-[100px] px-2 py-2 border rounded"
-                  >
-                    {currencyList().map((currency) => (
-                      <option key={currency.code} value={currency.code}>
-                        {currency.label}
-                      </option>
-                    ))}
-                  </select>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Purchase Price
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">
+                          {getCurrencySymbol(formData.currency)}
+                        </span>
+                      </div>
+                      <Input
+                        name="purchase_price"
+                        type="number"
+                        value={formData.purchase_price}
+                        onChange={handleChange}
+                        className="pl-7 w-full"
+                      />
+                    </div>
+                    <select
+                      name="currency"
+                      value={formData.currency}
+                      onChange={handleChange}
+                      className="min-w-[100px] px-2 py-2 border rounded"
+                    >
+                      {currencyList().map((currency) => (
+                        <option key={currency.code} value={currency.code}>
+                          {currency.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Input
-                    name="size"
-                    type="number"
-                    value={formData.size}
-                    onChange={handleChange}
-                    className="flex-1"
-                  />
-                  <select
-                    name="unit_system"
-                    value={formData.unit_system}
-                    onChange={handleChange}
-                    className="min-w-[100px] px-2 py-2 border rounded"
-                  >
-                    <option value="metric">m²</option>
-                    <option value="imperial">ft²</option>
-                  </select>
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Property Size
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        name="size"
+                        type="number"
+                        value={formData.size}
+                        onChange={handleChange}
+                        className={`${
+                          formData.unit_system === "metric" ? "pr-8" : "pr-10"
+                        } w-full`}
+                      />
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500">
+                          {formData.unit_system === "metric" ? "m²" : "ft²"}
+                        </span>
+                      </div>
+                    </div>
+                    <select
+                      name="unit_system"
+                      value={formData.unit_system}
+                      onChange={handleChange}
+                      className="min-w-[80px] px-2 py-2 border rounded"
+                    >
+                      <option value="metric">m²</option>
+                      <option value="imperial">ft²</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 

@@ -5,16 +5,16 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-lg text-sm font-medium transition-all duration-200 transform ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
         default:
-          "bg-primary-500 text-white hover:bg-primary-700 active:bg-primary-800 shadow-sm hover:shadow-md transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary-400",
+          "text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700",
         secondary:
           "bg-secondary-500 text-white hover:bg-secondary-700 active:bg-secondary-800 shadow-sm hover:shadow-200 active:bg-primary-300 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary-300",
         destructive:
-          "bg-danger-500 text-white hover:bg-danger-700 active:bg-danger-700 shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-danger-400",
+          "bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-700 shadow-sm transition-all duration-200 focus-visible:ring-2 focus-visible:ring-danger-400",
         outline:
           "bg-secondary-100 border border-gray-200 text-gray-800 hover:bg-gray-50 active:bg-gray-100 transition-all duration-200 focus-visible:ring-2 focus-visible:ring-gray-300",
         outlineDestructive:
