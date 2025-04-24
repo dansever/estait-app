@@ -38,7 +38,7 @@ export default function PropertyPage() {
         const supabase = await createSPASassClient();
 
         const rawProperty = await supabase.getProperty(user.id, id);
-        const rawLease = await supabase.getCurrentLeaseByProperty(id);
+        const rawActiveLease = await supabase.getCurrentLeaseByProperty(id);
         const rawPastLeases = await supabase.getPastLeasesByProperty(id);
         const rawAddress = await supabase.getAddressForProperty(id);
         const rawDocuments = await supabase.getDocumentsByProperty(id);
@@ -47,7 +47,7 @@ export default function PropertyPage() {
 
         setPropertyData({
           rawProperty,
-          rawLease,
+          rawActiveLease,
           rawPastLeases,
           rawAddress,
           rawDocuments,
@@ -81,7 +81,7 @@ export default function PropertyPage() {
     if (!user?.id || typeof id !== "string") return;
     const supabase = await createSPASassClient();
     const rawProperty = await supabase.getProperty(user.id, id);
-    const rawLease = await supabase.getCurrentLeaseByProperty(id);
+    const rawActiveLease = await supabase.getCurrentLeaseByProperty(id);
     const rawPastLeases = await supabase.getPastLeasesByProperty(id);
     const rawAddress = await supabase.getAddressForProperty(id);
     const rawDocuments = await supabase.getDocumentsByProperty(id);
@@ -90,7 +90,7 @@ export default function PropertyPage() {
 
     setPropertyData({
       rawProperty,
-      rawLease,
+      rawActiveLease,
       rawPastLeases,
       rawAddress,
       rawDocuments,
@@ -108,15 +108,19 @@ export default function PropertyPage() {
         <CardContent>
           <p>
             <strong>Status:</strong>{" "}
-            {propertyData.rawLease?.is_lease_active ? "Occupied" : "Vacant"}
+            {propertyData.rawActiveLease?.is_lease_active
+              ? "Occupied"
+              : "Vacant"}
           </p>
           <p>
             <strong>Rent: </strong>
             {formatCurrency(
-              propertyData.rawLease?.rent_amount,
-              propertyData.rawLease?.currency
+              propertyData.rawActiveLease?.rent_amount,
+              propertyData.rawActiveLease?.currency
             )}
-            {formatPaymentFrequency(propertyData.rawLease?.payment_frequency)}
+            {formatPaymentFrequency(
+              propertyData.rawActiveLease?.payment_frequency
+            )}
           </p>
           <p>
             <strong>Address:</strong>{" "}

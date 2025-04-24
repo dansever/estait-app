@@ -5,19 +5,15 @@ import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
 import { Button } from "@/components/ui/button";
-import EditLeaseDialog from "@/components/property/lease/EditLeaseDialog";
-import AddLeaseDialog from "@/components/property/lease/AddLeaseDialog";
+import EditAddLeaseDialog from "@/components/property/lease/EditAddLeaseDialog";
 import { Progress } from "@/components/ui/progress";
 import {
   FaWhatsapp,
   FaPhone,
   FaRegCalendarAlt,
-  FaRegMoneyBillAlt,
-  FaRegClock,
   FaShieldAlt,
   FaHistory,
   FaUser,
-  FaCalendarCheck,
 } from "react-icons/fa";
 import {
   Plus,
@@ -31,8 +27,8 @@ import {
   Key,
   Phone,
   Copy,
+  Check,
 } from "lucide-react";
-import { MdOutlineMail } from "react-icons/md";
 import {
   differenceInDays,
   parseISO,
@@ -40,9 +36,8 @@ import {
   isValid,
   isFuture,
   isPast,
-  isToday,
-  addDays,
 } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LeaseTenants({
   data,
@@ -51,15 +46,23 @@ export default function LeaseTenants({
   data: EnrichedProperty;
   refreshData: () => void;
 }) {
-  const { rawProperty, rawLease, rawPastLeases } = data;
+  const { rawActiveLease, rawPastLeases } = data;
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [editingLease, setEditingLease] = useState<any>(null);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
+  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const { toast } = useToast();
   const pastLeases = rawPastLeases ?? [];
   const loadingPastLeases = false;
 
-  // Add these guards to prevent errors if rawLease is null
-  const start = rawLease?.lease_start ? parseISO(rawLease.lease_start) : null;
-  const end = rawLease?.lease_end ? parseISO(rawLease.lease_end) : null;
+  // Add these guards to prevent errors if rawActiveLease is null
+  const start = rawActiveLease?.lease_start
+    ? parseISO(rawActiveLease.lease_start)
+    : null;
+  const end = rawActiveLease?.lease_end
+    ? parseISO(rawActiveLease.lease_end)
+    : null;
 
   const today = new Date();
   const totalDays =
@@ -103,15 +106,45 @@ export default function LeaseTenants({
     return "green";
   };
 
+  // Copy text to clipboard
+  const copyToClipboard = (text: string, type: "email" | "phone") => {
+    navigator.clipboard.writeText(text).then(() => {
+      if (type === "email") {
+        setCopiedEmail(text);
+        setTimeout(() => setCopiedEmail(null), 2000);
+      } else {
+        setCopiedPhone(text);
+        setTimeout(() => setCopiedPhone(null), 2000);
+      }
+
+      toast({
+        title: "Copied to clipboard",
+        description: `${
+          type === "email" ? "Email" : "Phone"
+        } has been copied to clipboard.`,
+        duration: 2000,
+      });
+    });
+  };
+
+  // Handle editing a past lease
+  const handleEditPastLease = (lease: any) => {
+    setEditingLease(lease);
+    setIsEditOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-end gap-2">
-        {rawLease?.is_lease_active ? (
+        {rawActiveLease?.is_lease_active ? (
           <>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setIsEditOpen(true)}
+              onClick={() => {
+                setEditingLease(rawActiveLease);
+                setIsEditOpen(true);
+              }}
               className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
             >
               <Pencil className="h-4 w-4 text-gray-500" />
@@ -140,7 +173,7 @@ export default function LeaseTenants({
       </div>
 
       {/* Two cards side by side OR fallback if no active lease */}
-      {rawLease ? (
+      {rawActiveLease ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Lease Details Card */}
           <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
@@ -171,7 +204,7 @@ export default function LeaseTenants({
                 end &&
                 isValid(start) &&
                 isValid(end) &&
-                rawLease.is_lease_active && (
+                rawActiveLease.is_lease_active && (
                   <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                     <div className="flex justify-between text-xs text-gray-600 mb-1.5">
                       <span>{start && format(start, "MMM d, yyyy")}</span>
@@ -209,15 +242,18 @@ export default function LeaseTenants({
                       Rent Amount
                     </p>
                     <p className="text-base font-medium">
-                      {formatCurrency(rawLease.rent_amount, rawLease.currency)}
+                      {formatCurrency(
+                        rawActiveLease.rent_amount,
+                        rawActiveLease.currency
+                      )}
                       <span className="text-xs text-gray-500 ml-1">
-                        / {rawLease.payment_frequency}
+                        / {rawActiveLease.payment_frequency}
                       </span>
                     </p>
                   </div>
                 </div>
 
-                {rawLease.payment_frequency === "monthly" && (
+                {rawActiveLease.payment_frequency === "monthly" && (
                   <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                     <CalendarClock className="h-5 w-5 text-gray-400 mt-0.5" />
                     <div>
@@ -225,7 +261,7 @@ export default function LeaseTenants({
                         Payment Due
                       </p>
                       <p className="text-base font-medium">
-                        Day {rawLease.payment_due_day} of each month
+                        Day {rawActiveLease.payment_due_day} of each month
                       </p>
                     </div>
                   </div>
@@ -239,8 +275,8 @@ export default function LeaseTenants({
                     </p>
                     <p className="text-base font-medium">
                       {formatCurrency(
-                        rawLease.security_deposit,
-                        rawLease.currency
+                        rawActiveLease.security_deposit,
+                        rawActiveLease.currency
                       )}
                     </p>
                   </div>
@@ -258,58 +294,83 @@ export default function LeaseTenants({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {rawLease.tenant_first_name ? (
+              {rawActiveLease.tenant_first_name ? (
                 <>
                   <div className="flex flex-col items-center justify-center py-3">
                     <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mb-3">
                       <FaUser className="h-8 w-8" />
                     </div>
                     <h3 className="text-lg font-medium">
-                      {rawLease.tenant_first_name} {rawLease.tenant_last_name}
+                      {rawActiveLease.tenant_first_name}{" "}
+                      {rawActiveLease.tenant_last_name}
                     </h3>
                     <p className="text-sm text-gray-500">Current Tenant</p>
                   </div>
 
                   <div className="grid grid-cols-1 gap-2 mt-4">
-                    {rawLease.tenant_email && (
-                      <a
-                        href={`mailto:${rawLease.tenant_email}`}
-                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                    {rawActiveLease.tenant_email && (
+                      <button
+                        onClick={() =>
+                          copyToClipboard(rawActiveLease.tenant_email, "email")
+                        }
+                        className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
+                        title="Copy email"
                       >
                         <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                           <Mail className="h-4 w-4" />
                         </div>
-                        <span className="text-sm group-hover:text-blue-600 transition-colors">
-                          {rawLease.tenant_email}
+                        <span className="text-sm transition-colors flex-1">
+                          {rawActiveLease.tenant_email}
                         </span>
-                      </a>
+                        <div className="h-8 w-8 rounded-full group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
+                          {copiedEmail === rawActiveLease.tenant_email ? (
+                            <Check className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </div>
+                      </button>
                     )}
 
-                    {rawLease.tenant_phone && (
+                    {rawActiveLease.tenant_phone && (
                       <div className="space-y-2">
-                        <a
-                          href={`tel:${rawLease.tenant_phone}`}
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                        <button
+                          onClick={() =>
+                            copyToClipboard(
+                              rawActiveLease.tenant_phone,
+                              "phone"
+                            )
+                          }
+                          className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
+                          title="Copy phone number"
+                          type="button"
                         >
                           <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                             <Phone className="h-4 w-4" />
                           </div>
-                          <span className="text-sm group-hover:text-green-600 transition-colors">
-                            {rawLease.tenant_phone}
+                          <span className="text-sm transition-colors flex-1">
+                            {rawActiveLease.tenant_phone}
                           </span>
-                        </a>
+                          <div className="h-8 w-8 rounded-full group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
+                            {copiedPhone === rawActiveLease.tenant_phone ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </div>
+                        </button>
 
-                        {typeof rawLease.tenant_phone === "string" &&
-                          rawLease.tenant_phone.replace(/\D/g, "").length >
-                            5 && (
+                        {typeof rawActiveLease.tenant_phone === "string" &&
+                          rawActiveLease.tenant_phone.replace(/\D/g, "")
+                            .length > 5 && (
                             <a
-                              href={`https://wa.me/${rawLease.tenant_phone.replace(
+                              href={`https://wa.me/${rawActiveLease.tenant_phone.replace(
                                 /\D/g,
                                 ""
                               )}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-lg hover:bg-green-50 transition-colors group"
+                              className="flex items-center gap-3 p-3 rounded-[45px] hover:bg-green-50 transition-colors group"
                             >
                               <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
                                 <FaWhatsapp className="h-4 w-4" />
@@ -420,11 +481,11 @@ export default function LeaseTenants({
                       <div key={i} className="relative">
                         <div className="p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-all">
                           {/* Compact Summary View - Always visible */}
-                          <div
-                            className="flex justify-between items-center cursor-pointer"
-                            onClick={() => setIsExpanded(!isExpanded)}
-                          >
-                            <div className="flex items-center gap-3">
+                          <div className="flex justify-between items-center">
+                            <div
+                              className="flex items-center gap-3 cursor-pointer"
+                              onClick={() => setIsExpanded(!isExpanded)}
+                            >
                               <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
                                 <FaUser className="h-4 w-4" />
                               </div>
@@ -450,28 +511,64 @@ export default function LeaseTenants({
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3">
                               {/* Quick Action Icons */}
+                              <button
+                                onClick={() => handleEditPastLease(lease)}
+                                className="h-8 w-8 rounded-full hover:bg-primary-100 flex items-center justify-center text-gray-600 hover:text-primary-600 transition-colors"
+                                title="Edit lease"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </button>
+
                               {lease.tenant_email && (
-                                <a
-                                  href={`mailto:${lease.tenant_email}`}
-                                  onClick={(e) => e.stopPropagation()}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(
+                                      lease.tenant_email,
+                                      "email"
+                                    );
+                                  }}
                                   title={lease.tenant_email}
-                                  className="text-gray-400 hover:text-blue-600 transition-colors"
+                                  className="h-8 w-8 rounded-full hover:bg-blue-100 flex items-center justify-center text-gray-600 hover:text-blue-600 transition-colors"
                                 >
-                                  <Mail className="h-4 w-4" />
-                                </a>
+                                  {copiedEmail === lease.tenant_email ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <Mail className="h-4 w-4" />
+                                  )}
+                                </button>
                               )}
 
                               {lease.tenant_phone && (
-                                <a
-                                  href={`tel:${lease.tenant_phone}`}
-                                  onClick={(e) => e.stopPropagation()}
-                                  title={lease.tenant_phone}
-                                  className="text-gray-400 hover:text-green-600 transition-colors"
-                                >
-                                  <Phone className="h-4 w-4" />
-                                </a>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(
+                                        lease.tenant_phone,
+                                        "phone"
+                                      );
+                                    }}
+                                    title={lease.tenant_phone}
+                                    className="h-8 w-8 rounded-full hover:bg-green-100 flex items-center justify-center text-gray-600 hover:text-green-600 transition-colors"
+                                  >
+                                    {copiedPhone === lease.tenant_phone ? (
+                                      <Check className="h-4 w-4 text-green-500" />
+                                    ) : (
+                                      <Phone className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                  <a
+                                    href={`tel:${lease.tenant_phone}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    title="Call"
+                                    className="h-8 w-8 rounded-full hover:bg-green-100 flex items-center justify-center text-gray-600 hover:text-green-600 transition-colors"
+                                  >
+                                    <FaPhone className="h-3.5 w-3.5" />
+                                  </a>
+                                </div>
                               )}
 
                               <div className="flex items-center gap-1">
@@ -484,7 +581,10 @@ export default function LeaseTenants({
                                 </span>
                               </div>
 
-                              <button className="ml-2 p-1 rounded-full hover:bg-gray-200">
+                              <button
+                                className="ml-2 p-1 rounded-full hover:bg-gray-200"
+                                onClick={() => setIsExpanded(!isExpanded)}
+                              >
                                 {isExpanded ? (
                                   <svg
                                     xmlns="http://www.w3.org/2000/svg"
@@ -623,18 +723,20 @@ export default function LeaseTenants({
         </CardContent>
       </Card>
 
-      {/* Add & Edit Lease Dialogs */}
-      <AddLeaseDialog
-        propertyId={rawProperty.id}
-        open={isAddOpen}
-        onOpenChange={setIsAddOpen}
-        onSave={refreshData}
-      />
-
-      <EditLeaseDialog
+      {/* Edit & Add Lease Dialogs */}
+      <EditAddLeaseDialog
+        mode="edit"
         data={data}
+        leaseToEdit={editingLease}
         open={isEditOpen}
         onOpenChange={setIsEditOpen}
+        onSave={refreshData}
+      />
+      <EditAddLeaseDialog
+        mode="add"
+        data={data}
+        open={isAddOpen}
+        onOpenChange={setIsAddOpen}
         onSave={refreshData}
       />
     </div>

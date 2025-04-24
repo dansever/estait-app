@@ -19,10 +19,10 @@ const propertyCardProps = (property: EnrichedProperty) => ({
   address: `${property.rawAddress?.street || ""} ${
     property.rawAddress?.city || ""
   }, ${property.rawAddress?.country || ""}`,
-  status: property.rawLease?.is_lease_active ? "occupied" : "vacant",
-  rentalPrice: property.rawLease?.rent_amount || 0,
-  rentalCurrency: property.rawLease?.currency || "USD",
-  paymentFrequency: property.rawLease?.payment_frequency || "monthly",
+  status: property.rawActiveLease?.is_lease_active ? "occupied" : "vacant",
+  rentalPrice: property.rawActiveLease?.rent_amount || 0,
+  rentalCurrency: property.rawActiveLease?.currency || "USD",
+  paymentFrequency: property.rawActiveLease?.payment_frequency || "monthly",
 });
 
 export default function PropertiesPage() {
@@ -62,7 +62,7 @@ export default function PropertiesPage() {
 
           enriched[property.id] = {
             rawProperty: property,
-            rawLease: lease ?? undefined,
+            rawActiveLease: lease ?? undefined,
             rawAddress: address ?? undefined,
           };
         } catch (err: unknown) {

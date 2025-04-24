@@ -168,6 +168,7 @@ export default function AddPropertyPage() {
             onChange={handleChange}
             options={Constants.public.Enums.PROPERTY_TYPE}
           />
+
           <InputField
             label="Purchase Price"
             name="purchase_price"

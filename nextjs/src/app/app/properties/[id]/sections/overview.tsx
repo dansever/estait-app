@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { formatCurrency } from "@/lib/formattingHelpers";
 import {
   Pencil,
@@ -15,6 +14,8 @@ import {
   Ruler,
   Badge,
   Info,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
@@ -52,6 +53,81 @@ export default function Overview({
       window.location.href = "/app/properties";
     }
   };
+
+  function AddressBlock({ rawAddress }: { rawAddress: any }) {
+    const [copied, setCopied] = useState(false);
+
+    const fullAddress = [
+      rawAddress.street
+        ? rawAddress.street_number
+          ? `${rawAddress.street_number} ${rawAddress.street}`
+          : rawAddress.street
+        : null,
+      [rawAddress.city, rawAddress.state, rawAddress.zip_code]
+        .filter(Boolean)
+        .join(", "),
+      rawAddress.country,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const handleCopy = () => {
+      navigator.clipboard.writeText(fullAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    };
+
+    return (
+      <div
+        onClick={handleCopy}
+        className="relative group p-4 rounded-xl bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+        title="Click to copy full address"
+      >
+        {/* Top-right icon */}
+        <div className="absolute top-2 right-2 p-1 rounded-full text-gray-500 group-hover:bg-gray-200 transition-colors">
+          {copied ? (
+            <Check className="h-4 w-4 text-green-500" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </div>
+
+        <div className="flex items-start gap-3">
+          <div className="h-8 w-8 rounded-full bg-primary-100 flex-shrink-0 flex items-center justify-center text-primary-600">
+            <MapPin className="h-4 w-4" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1">
+              Full Address
+            </p>
+
+            {/* Street + Street Number */}
+            {rawAddress.street && (
+              <p className="text-sm text-gray-800 font-medium">
+                {rawAddress.street_number
+                  ? `${rawAddress.street_number} ${rawAddress.street}`
+                  : rawAddress.street}
+              </p>
+            )}
+
+            {/* City, State, Zip */}
+            {(rawAddress.city || rawAddress.state || rawAddress.zip_code) && (
+              <p className="text-sm text-gray-700">
+                {[rawAddress.city, rawAddress.state, rawAddress.zip_code]
+                  .filter(Boolean)
+                  .join(", ")}
+              </p>
+            )}
+
+            {/* Country */}
+            {rawAddress.country && (
+              <p className="text-sm text-gray-700">{rawAddress.country}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -180,25 +256,7 @@ export default function Overview({
               </div>
 
               <div className="mt-2 flex items-start gap-3 p-3 rounded-lg bg-primary-50 border border-primary-100">
-                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M14 11c5.333 0 5.333-8 0-8" />
-                    <path d="M6 11h8" />
-                    <path d="M6 15h8" />
-                    <path d="M9 19l3 -3" />
-                    <path d="M9 19l3 3" />
-                    <path d="M3 3v18h18" />
-                  </svg>
-                </div>
+                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600"></div>
                 <div>
                   <p className="text-xs font-medium text-primary-600">
                     Purchase Price
@@ -226,34 +284,7 @@ export default function Overview({
           <CardContent className="space-y-4">
             {rawAddress ? (
               <>
-                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="flex items-start gap-3">
-                    <div className="h-8 w-8 rounded-full bg-primary-100 flex-shrink-0 flex items-center justify-center text-primary-600">
-                      <MapPin className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-medium text-gray-500 mb-1">
-                        Full Address
-                      </p>
-                      <p className="text-sm font-medium">
-                        {`${rawAddress.street}`}
-                      </p>
-                      <p className="text-sm font-medium">
-                        {`${rawAddress.city}, ${rawAddress.country}`}
-                      </p>
-                      {rawAddress.state && (
-                        <p className="text-sm font-medium">
-                          {rawAddress.state}
-                        </p>
-                      )}
-                      {rawAddress.postal_code && (
-                        <p className="text-sm font-medium">
-                          {rawAddress.postal_code}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <AddressBlock rawAddress={rawAddress} />
 
                 <div className="mt-2 rounded-xl overflow-hidden shadow-md border-0">
                   <iframe

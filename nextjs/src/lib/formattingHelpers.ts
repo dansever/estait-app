@@ -33,3 +33,15 @@ export function formatPaymentFrequency(frequency: PaymentFrequency): string {
   };
   return map[frequency] ?? "";
 }
+
+// Format date to "Month Day, Year" (e.g., March 3, 2020)
+export const formatDateLong = (dateStr: string | Date): string => {
+  if (!dateStr) return "N/A";
+  const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+};

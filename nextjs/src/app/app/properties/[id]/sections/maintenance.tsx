@@ -8,24 +8,39 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Plus,
   LayoutList,
   Clock,
   CheckCircle2,
-  Clock10,
-  Pencil,
-  Trash2,
+  Filter,
+  ArrowUpDown,
+  CalendarDays,
+  AlertTriangle,
+  Search,
+  Info,
+  X,
 } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import MaintenanceTaskCard from "@/components/property/maintenance/MaintenanceTaskCard";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Maintenance({
   data,
@@ -158,112 +173,274 @@ export default function Maintenance({
   };
 
   return (
-    <div className="space-y-4 text-sm text-gray-700">
-      <Card>
-        <CardHeader>
-          <CardTitle>Maintenance & Tasks</CardTitle>
-          <CardDescription>
-            Manage tasks and maintenance requests for your property.
-          </CardDescription>
+    <div className="space-y-6">
+      <Card className="border-none shadow-sm">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl font-bold tracking-tight">
+                Maintenance & Tasks
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Manage tasks and maintenance requests for this property
+              </CardDescription>
+            </div>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => {
+                  const id = `temp-${Date.now()}`;
+                  setEditTaskId(id);
+                  setEditTaskData({
+                    title: "",
+                    description: "",
+                    priority: "medium",
+                    due_date: "",
+                    isNew: true,
+                  });
+                  setCreatingTask(true);
+                }}
+                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Task
+              </Button>
+            </motion.div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <Button
-            variant="outline"
-            onClick={() => {
-              const id = `temp-${Date.now()}`;
-              setEditTaskId(id);
-              setEditTaskData({
-                title: "",
-                description: "",
-                priority: "medium",
-                due_date: "",
-                isNew: true,
-              });
-              setCreatingTask(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Task
-          </Button>
-          <div className="flex justify-between items-center">
+
+        <CardContent className="space-y-6 pt-4">
+          {/* Control Panel */}
+          <div className="flex flex-col md:flex-row justify-between gap-4 bg-slate-50 p-3 rounded-lg">
             <Tabs
               defaultValue="all"
               value={activeTab}
               onValueChange={setActiveTab}
-              className="w-full"
+              className="w-full md:w-auto"
             >
-              <TabsList className="w-full grid grid-cols-3 lg:w-auto lg:inline-flex">
+              <TabsList className="grid grid-cols-3 w-full md:w-auto bg-slate-100">
                 <TabsTrigger
                   value="all"
-                  className="data-[state=active]:bg-secondary"
+                  className="flex items-center gap-1 text-sm"
                 >
-                  <LayoutList className="h-4 w-4 mr-2" /> All
+                  <LayoutList className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">All Tasks</span>
+                  <span className="sm:hidden">All</span>
+                  <Badge
+                    variant="outline"
+                    className="ml-1 bg-slate-200 text-slate-700 hover:bg-slate-200"
+                  >
+                    {rawTasks.length}
+                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="open"
-                  className="data-[state=active]:bg-secondary"
+                  className="flex items-center gap-1 text-sm"
                 >
-                  <Clock className="h-4 w-4 mr-2" /> Open
+                  <Clock className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Open</span>
+                  <Badge
+                    variant="outline"
+                    className="ml-1 bg-slate-200 text-slate-700 hover:bg-slate-200"
+                  >
+                    {rawTasks.filter((t) => t.task_status === "open").length}
+                  </Badge>
                 </TabsTrigger>
                 <TabsTrigger
                   value="completed"
-                  className="data-[state=active]:bg-secondary"
+                  className="flex items-center gap-1 text-sm"
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" /> Completed
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Completed</span>
+                  <span className="sm:hidden">Done</span>
+                  <Badge
+                    variant="outline"
+                    className="ml-1 bg-slate-200 text-slate-700 hover:bg-slate-200"
+                  >
+                    {
+                      rawTasks.filter((t) => t.task_status === "completed")
+                        .length
+                    }
+                  </Badge>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                setSortMode((prev) => (prev === "date" ? "urgency" : "date"))
-              }
-            >
-              Sort: {sortMode === "date" ? "Due Date" : "Urgency"}
-            </Button>
+            <div className="flex gap-2">
+              <div className="relative w-full md:w-[200px]">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Search tasks..."
+                  className="pl-9 h-9 text-sm bg-white border-slate-200 focus-visible:ring-blue-500"
+                />
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-slate-200 text-slate-600"
+                  >
+                    <Filter className="h-3.5 w-3.5 mr-1" />
+                    <span className="hidden sm:inline">Filter</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem>
+                    <AlertTriangle className="h-4 w-4 mr-2 text-red-500" />
+                    High Priority
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Clock className="h-4 w-4 mr-2 text-amber-500" />
+                    Medium Priority
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-500" />
+                    Low Priority
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>
+                    <CalendarDays className="h-4 w-4 mr-2 text-blue-500" />
+                    Has Due Date
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 border-slate-200 text-slate-600"
+                  >
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
+                    <span className="hidden sm:inline mr-1">Sort</span>
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 bg-slate-100 text-xs font-normal"
+                    >
+                      {sortMode === "date" ? "Due Date" : "Priority"}
+                    </Badge>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem
+                    onClick={() => setSortMode("date")}
+                    className="cursor-pointer"
+                  >
+                    <CalendarDays className="h-4 w-4 mr-2" />
+                    By Due Date
+                    {sortMode === "date" && (
+                      <CheckCircle2 className="h-4 w-4 ml-2 text-green-500" />
+                    )}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setSortMode("urgency")}
+                    className="cursor-pointer"
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    By Priority
+                    {sortMode === "urgency" && (
+                      <CheckCircle2 className="h-4 w-4 ml-2 text-green-500" />
+                    )}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
-          {filteredTasks.length === 0 && !creatingTask ? (
-            <Card>
-              <CardContent className="py-8 text-center text-gray-500">
-                No tasks found for this view.
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {[
-                ...(creatingTask
-                  ? [
-                      {
-                        id: editTaskId!,
-                        title: editTaskData?.title || "New Task",
-                        description: editTaskData?.description || "",
-                        priority: editTaskData?.priority || "medium",
-                        due_date: editTaskData?.due_date || "",
-                        task_status: "open",
-                      },
-                    ]
-                  : []),
-                ...sortedTasks,
-              ].map((task) => (
-                <MaintenanceTaskCard
-                  key={task.id}
-                  task={task}
-                  editTaskId={editTaskId}
-                  editTaskData={editTaskData}
-                  updatingTaskId={updatingTaskId}
-                  setEditTaskId={setEditTaskId}
-                  setEditTaskData={setEditTaskData}
-                  toggleTaskStatus={toggleTaskStatus}
-                  deleteTask={deleteTask}
-                  saveEditTask={saveEditTask}
-                  setCreatingTask={setCreatingTask}
-                />
-              ))}
-            </div>
-          )}
+          {/* Task List */}
+          <AnimatePresence>
+            {filteredTasks.length === 0 && !creatingTask ? (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Card className="bg-slate-50 border border-dashed border-slate-200">
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="rounded-full bg-slate-100 p-3 mb-3">
+                      <Info className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <h3 className="text-lg font-medium text-slate-700 mb-1">
+                      No tasks found
+                    </h3>
+                    <p className="text-slate-500 max-w-md mb-4">
+                      {activeTab === "all"
+                        ? "You haven't created any tasks for this property yet."
+                        : activeTab === "open"
+                        ? "There are no open tasks at the moment."
+                        : "You haven't completed any tasks yet."}
+                    </p>
+                    {activeTab !== "completed" && (
+                      <Button
+                        onClick={() => {
+                          const id = `temp-${Date.now()}`;
+                          setEditTaskId(id);
+                          setEditTaskData({
+                            title: "",
+                            description: "",
+                            priority: "medium",
+                            due_date: "",
+                            isNew: true,
+                          });
+                          setCreatingTask(true);
+                        }}
+                        variant="outline"
+                        className="bg-white"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create your first task
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ) : (
+              <ScrollArea className="h-[550px] pr-4">
+                <div className="space-y-3">
+                  {[
+                    ...(creatingTask
+                      ? [
+                          {
+                            id: editTaskId!,
+                            title: editTaskData?.title || "New Task",
+                            description: editTaskData?.description || "",
+                            priority: editTaskData?.priority || "medium",
+                            due_date: editTaskData?.due_date || "",
+                            task_status: "open",
+                          },
+                        ]
+                      : []),
+                    ...sortedTasks,
+                  ].map((task) => (
+                    <motion.div
+                      key={task.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      layout
+                    >
+                      <MaintenanceTaskCard
+                        task={task}
+                        editTaskId={editTaskId}
+                        editTaskData={editTaskData}
+                        updatingTaskId={updatingTaskId}
+                        setEditTaskId={setEditTaskId}
+                        setEditTaskData={setEditTaskData}
+                        toggleTaskStatus={toggleTaskStatus}
+                        deleteTask={deleteTask}
+                        saveEditTask={saveEditTask}
+                        setCreatingTask={setCreatingTask}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
     </div>
