@@ -61,6 +61,7 @@ export type Database = {
           file_name: string
           file_size_kb: number | null
           id: string
+          is_property_image: boolean
           lease_id: string | null
           mime_type: string
           property_id: string | null
@@ -75,6 +76,7 @@ export type Database = {
           file_name: string
           file_size_kb?: number | null
           id?: string
+          is_property_image?: boolean
           lease_id?: string | null
           mime_type: string
           property_id?: string | null
@@ -89,6 +91,7 @@ export type Database = {
           file_name?: string
           file_size_kb?: number | null
           id?: string
+          is_property_image?: boolean
           lease_id?: string | null
           mime_type?: string
           property_id?: string | null

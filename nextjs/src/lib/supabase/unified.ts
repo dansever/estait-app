@@ -117,6 +117,7 @@ export class SassClient {
   private async uploadToStorage(
     userId: string,
     file: File,
+    isPropertyImage: boolean,
     propertyId?: string
   ): Promise<string> {
     const allowedTypes = ["image/jpeg", "image/png", "application/pdf"];
@@ -132,8 +133,12 @@ export class SassClient {
     const filename = file.name
       ? file.name.replace(/[^0-9a-zA-Z!\-_.*'()]/g, "_")
       : `file_${Date.now()}`;
-    const child_folder = propertyId ?? "general";
-    const fullpath = `${userId}/${child_folder}/${filename}`;
+
+    const childFolder = propertyId ?? "general";
+
+    const fullpath = isPropertyImage
+      ? `${userId}/${childFolder}/prop_images/${filename}`
+      : `${userId}/${childFolder}/${filename}`;
 
     const { error } = await this.client.storage
       .from(STORAGE_BUCKET)
@@ -175,6 +180,7 @@ export class SassClient {
     propertyId?: string;
     file: File;
     fullpath: string;
+    isPropertyImage?: boolean;
     documentType?: string;
   }): Promise<DocumentRow> {
     const { userId, propertyId, file, fullpath } = params;
@@ -188,6 +194,7 @@ export class SassClient {
         mime_type: file.type,
         document_type: params.documentType ?? "other",
         storage_full_path: fullpath,
+        is_property_image: params.isPropertyImage ?? false,
       })
       .select()
       .single();
@@ -204,35 +211,125 @@ export class SassClient {
     handleSupabaseError(error);
   }
 
+  /**
+   * Updates a property's image_ids or documents_id fields to include the newly uploaded document.
+   * All property images are added to other_images only.
+   */
+  private async updateDocumentReferences(
+    userId: string,
+    propertyId: string,
+    doc: DocumentRow
+  ): Promise<void> {
+    const property = await this.getProperty(userId, propertyId);
+    if (!property) throw new Error("Property not found");
+
+    const updates: Partial<PropertyUpdate> = {};
+
+    if (doc.is_property_image) {
+      // Always append to other_images, do not touch main_image
+      const currentImages = property.image_ids ?? {
+        main_image: null,
+        other_images: [],
+      };
+
+      const newImage = { id: doc.id, path: doc.storage_full_path };
+
+      updates.image_ids = {
+        ...currentImages,
+        other_images: [...(currentImages.other_images || []), newImage],
+      };
+    } else {
+      updates.document_ids = {
+        ...(property.document_ids ?? {}),
+        [doc.id]: doc.storage_full_path,
+      };
+    }
+    await this.updateProperty(userId, propertyId, updates);
+  }
+
   /* Public Files & Document Methods */
   async uploadFile(
     userId: string,
     file: File,
+    isPropertyImage: boolean = false,
     propertyId?: string,
     documentType?: string
   ): Promise<DocumentRow> {
-    const fullpath = await this.uploadToStorage(userId, file, propertyId);
-    return await this.createDocumentEntry({
+    // Step 1: Upload file to Supabase storage
+    const fullpath = await this.uploadToStorage(
+      userId,
+      file,
+      isPropertyImage,
+      propertyId
+    );
+    // Step 2: Insert a record in the documents table
+    const doc = await this.createDocumentEntry({
       userId,
       propertyId,
       file,
       fullpath,
+      isPropertyImage,
       documentType,
     });
+
+    // Step 3: If the file is associated with a property, update the property's image_ids or documents_id
+    if (propertyId) {
+      await this.updateDocumentReferences(userId, propertyId, doc);
+    }
   }
 
-  async deleteDocumentAndFile(documentId: string): Promise<boolean> {
-    const { data, error } = await this.client
+  async deleteDocumentAndFile(
+    documentId: string,
+    propertyId?: string
+  ): Promise<boolean> {
+    // Step 1: Fetch the document to get its path, uploader, and type
+    const { data: doc, error } = await this.client
       .from(DOCUMENTS_TABLE)
-      .select("storage_full_path, uploaded_by")
+      .select("storage_full_path, uploaded_by, is_property_image")
       .eq("id", documentId)
       .single();
     handleSupabaseError(error);
 
-    if (!data?.storage_full_path) throw new Error("File path not found");
-    if (!data?.uploaded_by) throw new Error("Invalid user ownership");
+    if (!doc?.storage_full_path) throw new Error("File path not found");
+    if (!doc?.uploaded_by) throw new Error("Invalid user ownership");
 
-    await this.deleteFileFromStorage(data.storage_full_path);
+    // Step 2: Delete the file from Supabase storage
+    await this.deleteFileFromStorage(doc.storage_full_path);
+
+    // Step 3: Remove reference from property record (if provided)
+    if (propertyId) {
+      const property = await this.getProperty(doc.uploaded_by, propertyId);
+      if (!property) throw new Error("Property not found");
+      const updates: Partial<PropertyUpdate> = {};
+      if (doc.is_property_image) {
+        const currentImages = property.image_ids ?? {
+          main_image: null,
+          other_images: [],
+        };
+
+        // Remove the image from other_images
+        const filteredImages = (currentImages.other_images || []).filter(
+          (img) => img.id !== documentId
+        );
+
+        // Also clear main_image if it matches this document
+        const mainImage =
+          currentImages.main_image?.id === documentId
+            ? null
+            : currentImages.main_image;
+
+        updates.image_ids = {
+          main_image: mainImage,
+          other_images: filteredImages,
+        };
+      } else {
+        const currentDocs = { ...(property.document_ids ?? {}) };
+        delete currentDocs[documentId];
+        updates.document_ids = currentDocs;
+      }
+      await this.updateProperty(doc.uploaded_by, propertyId, updates);
+    }
+    // Step 4: Delete the document metadata from the documents table
     await this.deleteDocumentEntry(documentId);
     return true;
   }
@@ -305,6 +402,40 @@ export class SassClient {
     } catch (err) {
       console.error("[deleteDocumentsOfProperty]: Unexpected error:", err);
       throw err;
+    }
+  }
+
+  async getImagesForDisplay(propertyId: string): Promise<string[]> {
+    try {
+      // Get all documents for this property that are images (based on mime_type)
+      const { data, error } = await this.client
+        .from(DOCUMENTS_TABLE)
+        .select("*")
+        .eq("property_id", propertyId)
+        .like("mime_type", "image/%");
+
+      handleSupabaseError(error);
+
+      if (!data || data.length === 0) return [];
+
+      // Generate signed URLs for each image file
+      const imageUrls = await Promise.all(
+        data.map(async (doc) => {
+          try {
+            // Generate a signed URL that expires in 1 hour (3600 seconds)
+            return await this.generateSignedUrl(doc.storage_full_path, 3600);
+          } catch (err) {
+            console.error(`Error generating URL for image ${doc.id}:`, err);
+            return null;
+          }
+        })
+      );
+
+      // Filter out any nulls from failed URL generation
+      return imageUrls.filter(Boolean) as string[];
+    } catch (err) {
+      console.error("[getImagesForDisplay]: Error fetching images:", err);
+      return [];
     }
   }
 

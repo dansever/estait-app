@@ -16,4 +16,5 @@ export type EnrichedProperty = {
   rawDocuments?: DocumentRow[];
   rawTransactions?: TransactionRow[];
   rawTasks?: TasksRow[];
+  rawImages?: string[];
 };

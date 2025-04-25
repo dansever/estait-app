@@ -98,7 +98,7 @@ export default function FileManagement({
       setError("");
 
       const supabase = await createSPASassClient();
-      await supabase.uploadFile(user!.id, file, rawProperty?.id);
+      await supabase.uploadFile(user!.id, file, false, rawProperty?.id);
       await onRefresh();
       setSuccess("File uploaded successfully");
     } catch (err) {
@@ -138,7 +138,7 @@ export default function FileManagement({
       setError("");
       setShowDeleteDialog(false); // Close the dialog immediately so loading indicator can be seen
       const supabase = await createSPASassClient();
-      await supabase.deleteDocumentAndFile(fileToDelete.id);
+      await supabase.deleteDocumentAndFile(fileToDelete.id, rawProperty?.id);
       await onRefresh();
       setSuccess("File deleted successfully");
     } catch (err) {
