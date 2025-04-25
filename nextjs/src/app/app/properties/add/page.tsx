@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect, ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,17 +35,21 @@ export default function AddPropertyPage() {
   const { user } = useGlobal();
   const router = useRouter();
   const [form, setForm] = useState({
+    // Property Basic Information
     title: "",
     description: "",
     property_type: "house",
+    // Property Details
     purchase_price: "",
     currency: "USD",
     size: "",
     unit_system: "metric",
+    //Property Features
     bedrooms: "",
     bathrooms: "",
-    parking_spaces: 0, // Not nullable, default to 0 as per schema
+    parking_spaces: "",
     year_built: "",
+    // Property Address
     street: "",
     street_number: "",
     apartment_number: "",
@@ -63,42 +67,38 @@ export default function AddPropertyPage() {
     [key: string]: boolean;
   }>({});
 
-  // Auto-dismiss error messages after 5 seconds
+  // Auto-dismiss error/success message after 5 seconds
   useEffect(() => {
-    if (error) {
-      const timer = setTimeout(() => {
-        setError("");
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [error]);
-
-  // Auto-dismiss success messages after 5 seconds
-  useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => {
-        setSuccess(false);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [success]);
+    if (!error && !success) return;
+    const timer = setTimeout(() => {
+      if (error) setError("");
+      if (success) setSuccess(false);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [error, success]);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    const numericFields = [
+      "purchase_price",
+      "size",
+      "bedrooms",
+      "bathrooms",
+      "parking_spaces",
+      "year_built",
+    ];
+
+    // For numeric fields, ensure values are not negative
+    if (numericFields.includes(name) && value !== "") {
+      const numValue = Number(value);
+      if (numValue < 0) return; // Prevent negative values
+    }
+
     setForm((prev) => ({
       ...prev,
-      [name]: [
-        "purchase_price",
-        "size",
-        "bedrooms",
-        "bathrooms",
-        "parking_spaces",
-        "year_built",
-      ].includes(name)
-        ? Math.max(0, Number(value))
-        : value,
+      [name]: value,
     }));
   };
 
@@ -120,7 +120,6 @@ export default function AddPropertyPage() {
     const errors: { [key: string]: boolean } = {};
     let isValid = true;
 
-    // Check required fields
     if (!form.title) {
       errors.title = true;
       isValid = false;
@@ -131,7 +130,6 @@ export default function AddPropertyPage() {
       isValid = false;
     }
 
-    // Validate address fields
     if (!form.street || !form.city || !form.country) {
       errors.address = true;
       isValid = false;
@@ -148,11 +146,7 @@ export default function AddPropertyPage() {
 
   const handleSubmit = async () => {
     if (!user) return;
-
-    // Validate form before proceeding
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
     setLoading(true);
     setError("");
@@ -160,7 +154,6 @@ export default function AddPropertyPage() {
 
     try {
       const supabase = await createSPASassClient();
-      // 1. Create address first
       const { data: address, error: addressError } = await supabase.client
         .from("addresses")
         .insert({
@@ -177,27 +170,26 @@ export default function AddPropertyPage() {
 
       if (addressError || !address?.id) throw addressError;
 
-      // 2. Then create property with address_id
       const newProperty = await supabase.createProperty(user.id, {
+        // Property Basic Information
         title: form.title,
         description: form.description,
         property_type: form.property_type,
+        // Property Details
+        purchase_price: form.purchase_price ? Number(form.purchase_price) : 0,
         currency: form.currency,
-        size: form.size,
+        size: form.size ? Number(form.size) : 0,
         unit_system: form.unit_system,
         address_id: address.id,
-        purchase_price:
-          form.purchase_price === "" ? null : Number(form.purchase_price),
-        size: form.size === "" ? null : Number(form.size),
-        bedrooms: form.bedrooms === "" ? null : Number(form.bedrooms),
-        bathrooms: form.bathrooms === "" ? null : Number(form.bathrooms),
-        parking_spaces:
-          form.parking_spaces === "" ? 0 : Number(form.parking_spaces), // not nullable
-        year_built: form.year_built === "" ? null : Number(form.year_built),
+        // Property Features
+        bedrooms: form.bedrooms ? Number(form.bedrooms) : 0,
+        bathrooms: form.bathrooms ? Number(form.bathrooms) : 0,
+        parking_spaces: form.parking_spaces ? Number(form.parking_spaces) : 0,
+        year_built: form.year_built ? Number(form.year_built) : 0,
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
-      router.push("/app/properties?success=1"); //  redirect after creation
+      router.push("/app/properties?success=1");
     } catch (err) {
       console.error(err);
       setError("Failed to add property. Please try again.");
@@ -392,6 +384,7 @@ export default function AddPropertyPage() {
                               onChange={handleChange}
                               className="pl-7"
                               placeholder="0.00"
+                              min="0"
                             />
                           </div>
                         </div>
@@ -431,7 +424,8 @@ export default function AddPropertyPage() {
                               className={`${
                                 form.unit_system === "metric" ? "pr-8" : "pr-10"
                               }`}
-                              placeholder="0"
+                              placeholder="88"
+                              min="0"
                             />
                             <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
                               <span className="text-gray-500">
@@ -462,106 +456,57 @@ export default function AddPropertyPage() {
                     Features
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex flex-col space-y-1.5">
-                      <label
-                        htmlFor="bedrooms"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Bedrooms
-                      </label>
-                      <div className="relative">
-                        {form.bedrooms !== "" && (
-                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                            <User className="h-4 w-4 text-gray-400" />
-                          </div>
-                        )}
-                        <Input
-                          id="bedrooms"
-                          name="bedrooms"
-                          type="number"
-                          value={form.bedrooms === 0 ? "" : form.bedrooms}
-                          onChange={handleChange}
-                          className={form.bedrooms !== "" ? "pl-10" : ""}
-                          placeholder="0"
-                          step="0.5"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-1.5">
-                      <label
-                        htmlFor="bathrooms"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Bathrooms
-                      </label>
-                      <div className="relative">
-                        {form.bathrooms !== "" && (
-                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                            <Toilet className="h-4 w-4 text-gray-400" />
-                          </div>
-                        )}
-                        <Input
-                          id="bathrooms"
-                          name="bathrooms"
-                          type="number"
-                          value={form.bathrooms === 0 ? "" : form.bathrooms}
-                          onChange={handleChange}
-                          className={form.bathrooms !== "" ? "pl-10" : ""}
-                          placeholder="0"
-                          step="0.5"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-1.5">
-                      <label
-                        htmlFor="parking_spaces"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Parking Spaces
-                      </label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                          <Car className="h-4 w-4 text-gray-400" />
-                        </div>
-                        <Input
-                          id="parking_spaces"
-                          name="parking_spaces"
-                          type="number"
-                          value={form.parking_spaces}
-                          onChange={handleChange}
-                          className="pl-10"
-                          placeholder="0"
-                          step="1"
-                          min="0"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col space-y-1.5">
-                      <label
-                        htmlFor="year_built"
-                        className="text-sm font-medium text-gray-700"
-                      >
-                        Year Built
-                      </label>
-                      <div className="relative">
-                        {form.year_built !== "" && (
-                          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                            <Calendar className="h-4 w-4 text-gray-400" />
-                          </div>
-                        )}
-                        <Input
-                          id="year_built"
-                          name="year_built"
-                          type="number"
-                          value={form.year_built === 0 ? "" : form.year_built}
-                          onChange={handleChange}
-                          className={form.year_built !== "" ? "pl-10" : ""}
-                          placeholder="0"
-                          step="1"
-                        />
-                      </div>
-                    </div>
+                    {/* Bedrooms */}
+                    <InputField
+                      label="Bedrooms"
+                      name="bedrooms"
+                      type="number"
+                      value={form.bedrooms ?? ""}
+                      onChange={handleChange}
+                      placeholder="0"
+                      icon={<User className="h-4 w-4 text-gray-400" />}
+                      step="0.5"
+                      min="0"
+                    />
+
+                    {/* Bathrooms */}
+                    <InputField
+                      label="Bathrooms"
+                      name="bathrooms"
+                      type="number"
+                      value={form.bathrooms ?? ""}
+                      onChange={handleChange}
+                      placeholder="0"
+                      icon={<Toilet className="h-4 w-4 text-gray-400" />}
+                      min="0"
+                      step="0.5"
+                    />
+
+                    {/* Parking Spaces */}
+                    <InputField
+                      label="Parking Spaces"
+                      name="parking_spaces"
+                      type="number"
+                      value={form.parking_spaces ?? ""}
+                      onChange={handleChange}
+                      placeholder="0"
+                      icon={<Car className="h-4 w-4 text-gray-400" />}
+                      min="0"
+                      step="1"
+                    />
+
+                    {/* Year Built */}
+                    <InputField
+                      label="Year Built"
+                      name="year_built"
+                      type="number"
+                      value={form.year_built ?? ""}
+                      onChange={handleChange}
+                      placeholder="1996"
+                      icon={<Calendar className="h-4 w-4 text-gray-400" />}
+                      min="0"
+                      step="1"
+                    />
                   </div>
                 </div>
 

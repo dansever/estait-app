@@ -19,6 +19,32 @@ import { Card, CardContent } from "@/components/ui/card";
 import { createSPASassClient } from "@/lib/supabase/client";
 import AddressInput from "@/components/property/GoogleAddressInput";
 
+// Define form state interface for better type safety
+interface PropertyFormState {
+  // Property Basic Information
+  title: string;
+  description: string;
+  property_type: string;
+  // Property Details
+  purchase_price: string;
+  currency: string;
+  size: string;
+  unit_system: string;
+  // Property Features
+  bedrooms: string;
+  bathrooms: string;
+  parking_spaces: string;
+  year_built: string;
+  // Property Address
+  street: string;
+  street_number: string;
+  apartment_number: string;
+  city: string;
+  state: string;
+  country: string;
+  zip_code: string;
+}
+
 type EditPropertyDialogProps = {
   data: EnrichedProperty;
   open: boolean;
@@ -32,7 +58,7 @@ export default function EditPropertyDialog({
   onOpenChange,
   onSave,
 }: EditPropertyDialogProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PropertyFormState>({
     title: data.rawProperty.title || "",
     description: data.rawProperty.description || "",
     property_type: data.rawProperty.property_type || "other",
@@ -46,18 +72,47 @@ export default function EditPropertyDialog({
     country: data.rawAddress?.country || "",
     zip_code: data.rawAddress?.zip_code || "",
 
-    purchase_price: data.rawProperty.purchase_price ?? "",
-    size: data.rawProperty.size ?? "",
-    bedrooms: data.rawProperty.bedrooms ?? "",
-    bathrooms: data.rawProperty.bathrooms ?? "",
-    parking_spaces: data.rawProperty.parking_spaces ?? 0, // not nullable
-    year_built: data.rawProperty.year_built ?? "",
+    purchase_price:
+      data.rawProperty.purchase_price !== null
+        ? String(data.rawProperty.purchase_price)
+        : "",
+    size: data.rawProperty.size !== null ? String(data.rawProperty.size) : "",
+    bedrooms:
+      data.rawProperty.bedrooms !== null
+        ? String(data.rawProperty.bedrooms)
+        : "",
+    bathrooms:
+      data.rawProperty.bathrooms !== null
+        ? String(data.rawProperty.bathrooms)
+        : "",
+    parking_spaces:
+      data.rawProperty.parking_spaces !== null
+        ? String(data.rawProperty.parking_spaces)
+        : "",
+    year_built:
+      data.rawProperty.year_built !== null
+        ? String(data.rawProperty.year_built)
+        : "",
   });
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    const numericFields = [
+      "purchase_price",
+      "size",
+      "bedrooms",
+      "bathrooms",
+      "parking_spaces",
+      "year_built",
+    ];
+
+    // For numeric fields, ensure values are not negative
+    if (numericFields.includes(name) && value !== "") {
+      const numValue = Number(value);
+      if (numValue < 0) return; // Prevent negative values
+    }
 
     setFormData((prev) => ({
       ...prev,
@@ -75,18 +130,16 @@ export default function EditPropertyDialog({
         property_type: formData.property_type,
         currency: formData.currency,
         unit_system: formData.unit_system,
-        purchase_price:
-          formData.purchase_price === ""
-            ? null
-            : Number(formData.purchase_price),
-        size: formData.size === "" ? null : Number(formData.size),
-        bedrooms: formData.bedrooms === "" ? null : Number(formData.bedrooms),
-        bathrooms:
-          formData.bathrooms === "" ? null : Number(formData.bathrooms),
-        parking_spaces:
-          formData.parking_spaces === "" ? 0 : Number(formData.parking_spaces), // not nullable
-        year_built:
-          formData.year_built === "" ? null : Number(formData.year_built),
+        purchase_price: formData.purchase_price
+          ? Number(formData.purchase_price)
+          : null,
+        size: formData.size ? Number(formData.size) : null,
+        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
+        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
+        parking_spaces: formData.parking_spaces
+          ? Number(formData.parking_spaces)
+          : 0, // not nullable
+        year_built: formData.year_built ? Number(formData.year_built) : null,
       };
 
       const addressUpdate = {

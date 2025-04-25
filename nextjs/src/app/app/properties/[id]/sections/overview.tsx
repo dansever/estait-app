@@ -12,10 +12,11 @@ import {
   Car,
   Calendar,
   Ruler,
-  Info,
+  Quote,
   Copy,
   Check,
   Boxes,
+  Tag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import EditPropertyDialog from "@/components/property/EditPropertyDialog";
@@ -115,13 +116,11 @@ export default function Overview({
             <MapPin className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-xs font-medium text-gray-500 mb-1">
-              Full Address
-            </p>
+            <p className="text-m text-gray-500 mb-1">Full Address</p>
 
             {/* Street + Street Number */}
             {rawAddress.street && (
-              <p className="text-sm text-gray-800 font-medium">
+              <p className="text-l text-gray-800 font-medium">
                 {rawAddress.street_number
                   ? `${rawAddress.street_number} ${rawAddress.street}`
                   : rawAddress.street}
@@ -130,7 +129,7 @@ export default function Overview({
 
             {/* City, State, Zip */}
             {(rawAddress.city || rawAddress.state || rawAddress.zip_code) && (
-              <p className="text-sm text-gray-700">
+              <p className="text-l text-gray-700 font-medium">
                 {[rawAddress.city, rawAddress.state, rawAddress.zip_code]
                   .filter(Boolean)
                   .join(", ")}
@@ -139,7 +138,9 @@ export default function Overview({
 
             {/* Country */}
             {rawAddress.country && (
-              <p className="text-sm text-gray-700">{rawAddress.country}</p>
+              <p className="text-l text-gray-700 font-medium">
+                {rawAddress.country}
+              </p>
             )}
           </div>
         </div>
@@ -206,7 +207,7 @@ export default function Overview({
         {/* Property Overview Card - Redesigned */}
         <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
+            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
               <Home className="h-5 w-5 text-primary-500" />
               Property Overview
             </CardTitle>
@@ -216,22 +217,20 @@ export default function Overview({
               {rawProperty.description && (
                 <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
                   <div className="flex items-start gap-2">
-                    <Info className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-gray-700 italic">
+                    <Quote className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-l text-gray-700 italic">
                       {rawProperty.description}
                     </p>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Boxes className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Property Type
-                    </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Property Type</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {rawProperty.property_type || "Not specified"}
                     </p>
                   </div>
@@ -240,8 +239,8 @@ export default function Overview({
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Ruler className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">Size</p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Size</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {rawProperty.size
                         ? `${rawProperty.size} ${
                             rawProperty.unit_system === "metric" ? "m²" : "f²"
@@ -254,10 +253,8 @@ export default function Overview({
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Bed className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Bedrooms
-                    </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Bedrooms</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {rawProperty.bedrooms ?? "Not specified"}
                     </p>
                   </div>
@@ -266,10 +263,8 @@ export default function Overview({
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Bath className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Bathrooms
-                    </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Bathrooms</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {rawProperty.bathrooms ?? "Not specified"}
                     </p>
                   </div>
@@ -278,8 +273,8 @@ export default function Overview({
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Car className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">Parking</p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Parking</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {(rawProperty.parking_spaces ?? 0) > 0
                         ? `${rawProperty.parking_spaces} spot${
                             rawProperty.parking_spaces > 1 ? "s" : ""
@@ -292,10 +287,8 @@ export default function Overview({
                 <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
                   <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
                   <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Year Built
-                    </p>
-                    <p className="text-sm font-medium">
+                    <p className="text-m text-gray-500">Year Built</p>
+                    <p className="text-lg font-medium text-gray-800">
                       {rawProperty.year_built ?? "Not specified"}
                     </p>
                   </div>
@@ -303,12 +296,10 @@ export default function Overview({
               </div>
 
               <div className="mt-2 flex items-start gap-3 p-3 rounded-lg bg-primary-50 border border-primary-100">
-                <div className="h-8 w-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600"></div>
+                <Tag className="text-primary-500" />
                 <div>
-                  <p className="text-xs font-medium text-primary-600">
-                    Purchase Price
-                  </p>
-                  <p className="text-base font-semibold text-primary-700">
+                  <p className="text-m text-primary-500">Purchase Price</p>
+                  <p className="text-lg font-medium text-primary-800">
                     {formatCurrency(
                       rawProperty.purchase_price,
                       rawProperty.currency
@@ -323,9 +314,9 @@ export default function Overview({
         {/* Property Address Card - Redesigned */}
         <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
+            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
               <MapPin className="h-5 w-5 text-primary-500" />
-              Property Location
+              Location
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

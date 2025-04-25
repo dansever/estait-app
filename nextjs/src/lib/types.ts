@@ -251,7 +251,7 @@ export type Database = {
           id: string
           image_ids: Json
           notes: string | null
-          parking_spaces: number
+          parking_spaces: number | null
           property_type: Database["public"]["Enums"]["PROPERTY_TYPE"] | null
           purchase_price: number | null
           size: number | null
@@ -271,7 +271,7 @@ export type Database = {
           id?: string
           image_ids?: Json
           notes?: string | null
-          parking_spaces?: number
+          parking_spaces?: number | null
           property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null
           purchase_price?: number | null
           size?: number | null
@@ -291,7 +291,7 @@ export type Database = {
           id?: string
           image_ids?: Json
           notes?: string | null
-          parking_spaces?: number
+          parking_spaces?: number | null
           property_type?: Database["public"]["Enums"]["PROPERTY_TYPE"] | null
           purchase_price?: number | null
           size?: number | null
