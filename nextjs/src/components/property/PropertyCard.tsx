@@ -50,7 +50,7 @@ export default function PropertyCard({
   const router = useRouter();
 
   const handleClick = () => {
-    router.push(`/app/properties/${id}`);
+    router.push(`/properties/${id}`);
   };
 
   const getStatusBadge = () => {

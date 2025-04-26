@@ -1,18 +1,24 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Menu, LogOut } from "lucide-react";
 import { BsStars } from "react-icons/bs";
 import { useGlobal } from "@/lib/context/GlobalContext";
 import { createSPASassClient } from "@/lib/supabase/client";
 import AppSidebar from "./layout/AppSidebar";
+import { Settings } from "lucide-react";
+import type { PropertyRow } from "@/lib/enrichedPropertyType";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [properties, setProperties] = useState<PropertyRow[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const { user } = useGlobal();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -48,7 +54,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const { user } = useGlobal();
+  useEffect(() => {
+    const fetchProperties = async () => {
+      if (!user?.id) return;
+      try {
+        const client = await createSPASassClient();
+        const fetchedProperties = await client.getPropertiesByUser(user.id);
+        const sortedProperties = fetchedProperties.sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+        setProperties(fetchedProperties);
+      } catch (error) {
+        console.error("Failed to fetch properties:", error);
+      }
+    };
+
+    fetchProperties();
+  }, [user?.id]);
 
   const handleLogout = async () => {
     try {
@@ -83,6 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
         productName={productName}
+        properties={properties}
       />
 
       <div className="lg:pl-64">
@@ -116,12 +139,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setUserDropdownOpen(!isUserDropdownOpen)}
               className="flex items-center space-x-2 text-sm text-gray-700 hover:text-gray-900"
             >
-              {user?.full_name && (
-                <span className="font-medium text-sm mr-2">
-                  Hello {user.full_name.split(" ")[0]}
-                </span>
-              )}
-
               <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
                 {user?.avatarUrl ? (
                   <Image
@@ -151,6 +168,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   </p>
                 </div>
                 <div className="py-1">
+                  <Link
+                    href="/settings"
+                    onClick={() => setUserDropdownOpen(false)}
+                    className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                  >
+                    <Settings className="mr-3 h-4 w-4 text-gray-400" />
+                    Settings
+                  </Link>
+
                   <button
                     onClick={() => {
                       handleLogout();

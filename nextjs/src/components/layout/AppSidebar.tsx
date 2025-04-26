@@ -2,8 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X, Home, Building, Table2, Settings, Component } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible"; // adjust if needed
+import { X, Building, Component, ChevronDown } from "lucide-react";
 import { FaMagic } from "react-icons/fa";
+import type { PropertyRow } from "@/lib/enrichedPropertyType";
 
 type SidebarTab = {
   name: string;
@@ -15,21 +21,20 @@ interface AppSidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
   productName?: string;
+  properties?: PropertyRow[]; // Optional, can be empty
 }
 
 const sidebarTabs: SidebarTab[] = [
-  { name: "Homepage", href: "/app", icon: Home },
-  { name: "Properties", href: "/app/properties", icon: Building },
-  { name: "AI Search", href: "/app/ai-search", icon: FaMagic },
-  { name: "Table", href: "/app/table", icon: Table2 },
-  { name: "Settings", href: "/app/settings", icon: Settings },
-  { name: "Components", href: "/app/z-components", icon: Component },
+  { name: "Properties", href: "/properties", icon: Building },
+  { name: "AI Search", href: "/ai-search", icon: FaMagic },
+  { name: "Components", href: "/z-components", icon: Component },
 ];
 
 export default function AppSidebar({
   isOpen,
   toggleSidebar,
   productName,
+  properties = [],
 }: AppSidebarProps) {
   const pathname = usePathname();
 
@@ -62,6 +67,59 @@ export default function AppSidebar({
 
         <nav className="mt-4 px-2 space-y-1">
           {sidebarTabs.map((item) => {
+            if (item.name === "Properties") {
+              const isPropertiesActive = pathname.startsWith("/properties");
+              return (
+                <Collapsible
+                  key={item.name}
+                  defaultOpen={isPropertiesActive} // Auto-open if user is inside /properties
+                >
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className={`group flex w-full items-center px-2 py-2 text-sm font-medium rounded-md ${
+                        isPropertiesActive
+                          ? "bg-primary-50 text-primary-600"
+                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                      }`}
+                    >
+                      <item.icon
+                        className={`mr-3 h-5 w-5 ${
+                          isPropertiesActive
+                            ? "text-primary-500"
+                            : "text-gray-400 group-hover:text-gray-500"
+                        }`}
+                      />
+                      Properties
+                      <ChevronDown className="ml-auto h-4 w-4 text-gray-400" />
+                    </button>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent className="ml-8 mt-1 space-y-1">
+                    {properties.length > 0 ? (
+                      properties.map((property) => (
+                        <Link
+                          key={property.id}
+                          href={`/properties/${property.id}`}
+                          className={`block text-sm px-2 py-1 rounded-md ${
+                            pathname === `/properties/${property.id}`
+                              ? "bg-primary-100 text-primary-700"
+                              : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                          }`}
+                        >
+                          {property.title}
+                        </Link>
+                      ))
+                    ) : (
+                      <span className="block text-sm text-gray-400 px-2 py-1">
+                        No properties
+                      </span>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            }
+
+            // Regular sidebar items
             const isActive = pathname === item.href;
             return (
               <Link

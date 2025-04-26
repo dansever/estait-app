@@ -189,7 +189,7 @@ export default function AddPropertyPage() {
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
-      router.push("/app/properties?success=1");
+      router.push("/properties?success=1");
     } catch (err) {
       console.error(err);
       setError("Failed to add property. Please try again.");

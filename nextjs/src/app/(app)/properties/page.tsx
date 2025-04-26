@@ -92,7 +92,7 @@ export default function PropertiesPage() {
         <Button
           variant="default"
           size="lg"
-          onClick={() => router.push("/app/properties/add")}
+          onClick={() => router.push("/properties/add")}
           className="flex items-center gap-2 px-3 sm:px-5 max-w-full"
         >
           <Plus className="h-5 w-5" />
