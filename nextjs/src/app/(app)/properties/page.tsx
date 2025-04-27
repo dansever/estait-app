@@ -13,16 +13,23 @@ import { CheckCircle } from "lucide-react";
 
 // --- helper function ---
 const propertyCardProps = (property: EnrichedProperty) => ({
-  id: property.rawProperty.id,
-  image: "/stock-photos/apartment_1.jpg",
-  title: property.rawProperty.title,
-  address: `${property.rawAddress?.street || ""} ${
-    property.rawAddress?.city || ""
-  }, ${property.rawAddress?.country || ""}`,
-  status: property.rawActiveLease?.is_lease_active ? "occupied" : "vacant",
-  rentalPrice: property.rawActiveLease?.rent_amount || 0,
-  rentalCurrency: property.rawActiveLease?.currency || "USD",
-  paymentFrequency: property.rawActiveLease?.payment_frequency || "monthly",
+  property: {
+    id: property.rawProperty.id,
+    title: property.rawProperty.title,
+    address: `${property.rawAddress?.street || ""} ${
+      property.rawAddress?.city || ""
+    }, ${property.rawAddress?.country || ""}`,
+    images: ["/stock-photos/apartment_1.jpg"],
+    status: property.rawActiveLease?.is_lease_active ? "occupied" : "vacant",
+    rentalPrice: property.rawActiveLease?.rent_amount || 0,
+    rentalCurrency: property.rawActiveLease?.currency || "USD",
+    paymentFrequency: property.rawActiveLease?.payment_frequency || "monthly",
+    isPublished: true,
+    bedrooms: property.rawProperty.bedrooms,
+    bathrooms: property.rawProperty.bathrooms,
+    sqft: property.rawProperty.size,
+    propertyType: property.rawProperty.property_type,
+  },
 });
 
 export default function PropertiesPage() {

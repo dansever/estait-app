@@ -169,16 +169,17 @@ export default function Maintenance({
 
   return (
     <div className="space-y-6">
-      <Card className="border-none shadow-sm">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+      <Card className="overflow-hidden shadow-md border-0 bg-white">
+        <CardHeader className="pb-2 border-b">
+          <div className="flex justify-between items-start">
             <div>
-              <CardTitle className="text-2xl font-bold tracking-tight">
+              <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                <LayoutList className="h-5 w-5 text-primary-500" />
                 Maintenance & Tasks
               </CardTitle>
-              <CardDescription className="mt-1.5">
+              <p className="text-primary-700/80 mt-1 text-sm">
                 Manage tasks and maintenance requests for this property
-              </CardDescription>
+              </p>
             </div>
             <Button
               onClick={() => {
@@ -194,8 +195,9 @@ export default function Maintenance({
                 setCreatingTask(true);
               }}
               variant={"default"}
+              className="gap-1"
             >
-              <Plus />
+              <Plus className="h-4 w-4" />
               Add New Task
             </Button>
           </div>

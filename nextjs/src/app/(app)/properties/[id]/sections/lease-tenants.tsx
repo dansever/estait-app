@@ -151,56 +151,40 @@ export default function LeaseTenants({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end gap-2">
-        {rawActiveLease?.is_lease_active ? (
-          <>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setSelectedLeaseForEdit(rawActiveLease);
-                setIsEditOpen(true);
-              }}
-              className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
-            >
-              <Pencil className="h-4 w-4 text-gray-500" />
-              <span>Edit Lease</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAddOpen(true)}
-              className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
-            >
-              <CalendarClock className="h-4 w-4 text-gray-500" />
-              <span>Add Future Lease</span>
-            </Button>
-          </>
-        ) : (
-          <Button variant="default" onClick={() => setIsAddOpen(true)}>
-            <Plus className="text-white" />
-            <span>Add Lease</span>
-          </Button>
-        )}
-      </div>
-
       {/* Two cards side by side OR fallback if no active lease */}
       {rawActiveLease ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Lease Details Card */}
           <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-            <div className="relative">
+            <CardHeader className="pb-2 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                    <Key className="h-5 w-5 text-primary-500" />
+                    Lease Details
+                  </CardTitle>
+                  <p className="text-primary-700/80 mt-1 text-sm">
+                    Current lease information and payment details
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedLeaseForEdit(rawActiveLease);
+                    setIsEditOpen(true);
+                  }}
+                  className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+                >
+                  <Pencil className="h-4 w-4 text-gray-500" />
+                  <span>Edit Lease</span>
+                </Button>
+              </div>
               <div
                 className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium rounded-bl-md ${statusColor}`}
               >
                 {leaseStatus}
               </div>
-            </div>
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
-                <Key className="h-5 w-5 text-primary-500" />
-                Lease Details
-              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Lease Progress */}
@@ -291,11 +275,18 @@ export default function LeaseTenants({
 
           {/* Tenant Details Card */}
           <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
-                <CircleUser className="h-5 w-5 text-primary-500" />
-                Tenant Details
-              </CardTitle>
+            <CardHeader className="pb-2 border-b">
+              <div className="flex justify-between items-start">
+                <div>
+                  <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                    <CircleUser className="h-5 w-5 text-primary-500" />
+                    Tenant Details
+                  </CardTitle>
+                  <p className="text-primary-700/80 mt-1 text-sm">
+                    Contact information for the current tenant
+                  </p>
+                </div>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {rawActiveLease.tenant_first_name ? (
@@ -405,18 +396,56 @@ export default function LeaseTenants({
           </Card>
         </div>
       ) : (
-        <Card className="p-6 text-center text-gray-500">
-          <p>No active lease currently available for this property.</p>
+        <Card className="overflow-hidden shadow-md border-0 bg-white">
+          <CardHeader className="pb-2 border-b">
+            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+              <Key className="h-5 w-5 text-primary-500" />
+              Lease Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+                <Key className="h-8 w-8" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-500">
+                No Active Lease
+              </h3>
+              <p className="text-sm text-gray-400 mt-1 mb-4">
+                This property doesn't have any active lease at the moment
+              </p>
+              <Button variant="default" onClick={() => setIsAddOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Lease
+              </Button>
+            </div>
+          </CardContent>
         </Card>
       )}
 
       {/* Tenant Timeline Card */}
       <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-        <CardHeader className="border-b border-gray-100 pb-4">
-          <CardTitle className="flex items-center gap-2 text-lg font-heading font-semibold text-text-headline">
-            <FaHistory className="h-5 w-5 text-primary-500" />
-            Tenant Timeline & History
-          </CardTitle>
+        <CardHeader className="pb-2 border-b">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                <FaHistory className="h-5 w-5 text-primary-500" />
+                Tenant Timeline & History
+              </CardTitle>
+              <p className="text-primary-700/80 mt-1 text-sm">
+                View complete history of previous tenants and leases
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsAddOpen(true)}
+              className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
+            >
+              <Plus className="h-4 w-4 text-gray-500" />
+              <span>Add Past Lease</span>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-6">
           {pastLeases.length === 0 ? (

@@ -158,20 +158,6 @@ export default function Overview({
         </div>
       )}
 
-      <div className="flex justify-end gap-2">
-        <Button variant="default" onClick={() => setIsEditOpen(true)}>
-          <Pencil className="text-white" />
-          <span>Edit Property</span>
-        </Button>
-        <Button
-          variant="outlineDestructive"
-          onClick={() => setIsDeleteDialogOpen(true)}
-        >
-          <Trash2 className="h-4 w-4 text-danger" />
-          <span>Delete</span>
-        </Button>
-      </div>
-
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
@@ -202,161 +188,187 @@ export default function Overview({
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Cards grid with consistent styling */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Property Overview Card - Redesigned */}
-        <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
-              <Home className="h-5 w-5 text-primary-500" />
-              Property Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {rawProperty.description && (
-                <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                  <div className="flex items-start gap-2">
-                    <Quote className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-l text-gray-700 italic">
-                      {rawProperty.description}
-                    </p>
+      {/* Single card with two sections */}
+      <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
+        <CardHeader className="pb-2 border-b">
+          <div className="flex justify-between items-start">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                <Home className="h-5 w-5 text-primary-500" />
+                Property Overview
+              </CardTitle>
+              <p className="text-primary-700/80 mt-1 text-sm">
+                View and manage property details and location information
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="default" onClick={() => setIsEditOpen(true)}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Edit Property</span>
+              </Button>
+              <Button
+                variant="outlineDestructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="border border-transparent"
+              >
+                <Trash2 className="h-4 w-4 text-danger" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+            {/* Property Details Section */}
+            <div>
+              <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-gray-700">
+                <Boxes className="h-5 w-5 text-primary-500" />
+                Property Details
+              </h3>
+
+              <div className="space-y-4">
+                {rawProperty.description && (
+                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                    <div className="flex items-start gap-2">
+                      <Quote className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      <p className="text-l text-gray-700 italic">
+                        {rawProperty.description}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Boxes className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Property Type</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {rawProperty.property_type || "Not specified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Ruler className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Size</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {rawProperty.size
+                          ? `${rawProperty.size} ${
+                              rawProperty.unit_system === "metric" ? "m²" : "f²"
+                            }`
+                          : "Not specified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Bed className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Bedrooms</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {rawProperty.bedrooms ?? "Not specified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Bath className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Bathrooms</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {rawProperty.bathrooms ?? "Not specified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Car className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Parking</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {(rawProperty.parking_spaces ?? 0) > 0
+                          ? `${rawProperty.parking_spaces} spot${
+                              rawProperty.parking_spaces > 1 ? "s" : ""
+                            }`
+                          : "No parking"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                    <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
+                    <div>
+                      <p className="text-m text-gray-500">Year Built</p>
+                      <p className="text-lg font-medium text-gray-800">
+                        {rawProperty.year_built ?? "Not specified"}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Boxes className="h-5 w-5 text-gray-400 mt-0.5" />
+                <div className="mt-2 flex items-start gap-3 p-3 rounded-lg bg-primary-50 border border-primary-100">
+                  <Tag className="text-primary-500" />
                   <div>
-                    <p className="text-m text-gray-500">Property Type</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {rawProperty.property_type || "Not specified"}
+                    <p className="text-m text-primary-500">Purchase Price</p>
+                    <p className="text-lg font-medium text-primary-800">
+                      {formatCurrency(
+                        rawProperty.purchase_price,
+                        rawProperty.currency
+                      )}
                     </p>
                   </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Ruler className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-m text-gray-500">Size</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {rawProperty.size
-                        ? `${rawProperty.size} ${
-                            rawProperty.unit_system === "metric" ? "m²" : "f²"
-                          }`
-                        : "Not specified"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Bed className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-m text-gray-500">Bedrooms</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {rawProperty.bedrooms ?? "Not specified"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Bath className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-m text-gray-500">Bathrooms</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {rawProperty.bathrooms ?? "Not specified"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Car className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-m text-gray-500">Parking</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {(rawProperty.parking_spaces ?? 0) > 0
-                        ? `${rawProperty.parking_spaces} spot${
-                            rawProperty.parking_spaces > 1 ? "s" : ""
-                          }`
-                        : "No parking"}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Calendar className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-m text-gray-500">Year Built</p>
-                    <p className="text-lg font-medium text-gray-800">
-                      {rawProperty.year_built ?? "Not specified"}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-2 flex items-start gap-3 p-3 rounded-lg bg-primary-50 border border-primary-100">
-                <Tag className="text-primary-500" />
-                <div>
-                  <p className="text-m text-primary-500">Purchase Price</p>
-                  <p className="text-lg font-medium text-primary-800">
-                    {formatCurrency(
-                      rawProperty.purchase_price,
-                      rawProperty.currency
-                    )}
-                  </p>
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* Property Address Card - Redesigned */}
-        <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
-              <MapPin className="h-5 w-5 text-primary-500" />
-              Location
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {rawAddress ? (
-              <>
-                <AddressBlock rawAddress={rawAddress} />
+            {/* Location Section */}
+            <div className="border-t md:border-t-0 md:border-l border-gray-100 pt-6 md:pt-0 md:pl-6">
+              <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-gray-700">
+                <MapPin className="h-5 w-5 text-primary-500" />
+                Location
+              </h3>
 
-                <div className="mt-2 rounded-xl overflow-hidden shadow-md border-0">
-                  <iframe
-                    title="Property Location"
-                    width="100%"
-                    height="250"
-                    loading="lazy"
-                    style={{ border: 0 }}
-                    allowFullScreen
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src={`https://www.google.com/maps/embed/v1/place?key=${
-                      process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-                    }&q=${encodeURIComponent(
-                      `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
-                    )}`}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                  <MapPin className="h-8 w-8" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-500">
-                  No Address Information
-                </h3>
-                <p className="text-sm text-gray-400 mt-1">
-                  Add an address to display the location
-                </p>
+              <div className="space-y-4">
+                {rawAddress ? (
+                  <>
+                    <AddressBlock rawAddress={rawAddress} />
+
+                    <div className="mt-2 rounded-xl overflow-hidden shadow-md border-0">
+                      <iframe
+                        title="Property Location"
+                        width="100%"
+                        height="250"
+                        loading="lazy"
+                        style={{ border: 0 }}
+                        allowFullScreen
+                        referrerPolicy="no-referrer-when-downgrade"
+                        src={`https://www.google.com/maps/embed/v1/place?key=${
+                          process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+                        }&q=${encodeURIComponent(
+                          `${rawAddress.street}, ${rawAddress.city}, ${rawAddress.country}`
+                        )}`}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+                      <MapPin className="h-8 w-8" />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-500">
+                      No Address Information
+                    </h3>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Add an address to display the location
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Edit Property Dialog */}
       <EditPropertyDialog

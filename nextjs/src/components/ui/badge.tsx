@@ -10,7 +10,7 @@ const badgeVariants = cva(
       variant: {
         default: "bg-primary-600 text-white",
         secondary: "bg-secondary-200 text-secondary-900",
-        destructive: "bg-danger-600 text-white",
+        destructive: "bg-danger-600 text-white border border-danger-600",
         outline: "border border-gray-300 bg-gray-100 text-headline",
         outlineDestructive:
           "border border-danger-600 text-danger-600 bg-transparent",
@@ -18,9 +18,9 @@ const badgeVariants = cva(
         link: "text-primary underline underline-offset-4",
 
         // Status variants
-        success: "bg-success text-white",
-        warning: "bg-warning text-black",
-        danger: "bg-danger-500 text-white",
+        success: "bg-success text-white border border-success",
+        warning: "bg-warning text-black border border-warning",
+        danger: "bg-danger-500 text-white border border-danger-500",
       },
     },
     defaultVariants: {
