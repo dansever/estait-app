@@ -35,18 +35,21 @@ export default function AuthAwareButtons({ variant = "primary" }) {
     return isAuthenticated ? (
       <Link
         href="/properties"
-        className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+        className="font-semibold bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
       >
-        Sign Up
+        Dashboard
       </Link>
     ) : (
       <>
-        <Link href="/auth/login" className="text-gray-600 hover:text-gray-900">
+        <Link
+          href="/auth/login"
+          className="font-semibold text-gray-800 px-4 py-2 rounded-lg hover:text-primary-600 hover:bg-primary-100 transition-colors"
+        >
           Login
         </Link>
         <Link
           href="/auth/register"
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+          className="font-semibold bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
         >
           Sign Up
         </Link>

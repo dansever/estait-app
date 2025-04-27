@@ -75,6 +75,80 @@ const ComponentsPage = () => {
         </div>
 
         <div>
+          <h3 className="text-lg font-medium mb-3">Button Variants</h3>
+          <div className="flex flex-wrap gap-4">
+            {variants.map((variant) => (
+              <Button
+                key={variant}
+                variant={variant as any}
+                className="capitalize"
+              >
+                {variant}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-3">Button Variants</h3>
+          <div className="flex flex-wrap gap-4">
+            {variants.map((variant) => (
+              <Button
+                key={variant}
+                variant={variant as any}
+                className="capitalize"
+              >
+                {variant}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h3 className="text-lg font-medium mb-3">Button Variants</h3>
+          <div className="flex flex-wrap gap-4">
+            {variants.map((variant) => (
+              <Button
+                key={variant}
+                variant={variant as any}
+                className="capitalize"
+              >
+                {variant}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-3">Button Variants</h3>
+          <div className="flex flex-wrap gap-4">
+            {variants.map((variant) => (
+              <Button
+                key={variant}
+                variant={variant as any}
+                className="capitalize"
+              >
+                {variant}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-lg font-medium mb-3">Button Variants</h3>
+          <div className="flex flex-wrap gap-4">
+            {variants.map((variant) => (
+              <Button
+                key={variant}
+                variant={variant as any}
+                className="capitalize"
+              >
+                {variant}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div>
           <h3 className="text-lg font-medium mb-3">Button Sizes</h3>
           <div className="flex flex-wrap items-center gap-4">
             {sizes

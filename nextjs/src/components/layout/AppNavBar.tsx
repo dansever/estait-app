@@ -123,7 +123,7 @@ export default function AppNavBar({
   };
 
   return (
-    <div className="fixed top-0 right-0 z-40 bg-white shadow-sm transition-all duration-300 ease-in-out lg:left-64 left-0">
+    <div className="fixed top-0 left-0 right-0 z-40 bg-white/50 backdrop-blur-sm shadow-sm transition-all duration-300 ease-in-out">
       <div className="h-16 flex items-center justify-between px-4">
         {/* Menu toggle button for mobile */}
         <button
@@ -132,6 +132,14 @@ export default function AppNavBar({
         >
           <Menu className="h-5 w-5" />
         </button>
+
+        {/* App logo/name */}
+        <Link
+          href="/properties"
+          className="flex items-center space-x-2 text-primary-600 font-display text-lg font-semibold hover:text-primary-700 transition-colors"
+        >
+          <span>Estait</span>
+        </Link>
 
         {/* Left spacer on desktop, hidden on mobile */}
         <div className="hidden lg:block"></div>
