@@ -8,6 +8,8 @@ import { getCurrencySymbol } from "@/lib/formattingHelpers";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { LeaseRow } from "@/lib/enrichedPropertyType";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 
 export type LeaseFormData = {
   rent_amount: number | "";
@@ -115,18 +117,7 @@ export default function LeaseForm({
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    const { name, value, type } = e.target;
-    const isNumberField = [
-      "rent_amount",
-      "security_deposit",
-      "payment_due_day",
-    ].includes(name);
-    const isInvalid = isNumberField && value !== "" && Number(value) < 0;
-
-    setFormErrors((prev) => ({
-      ...prev,
-      [name]: isInvalid,
-    }));
+    const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
@@ -134,6 +125,22 @@ export default function LeaseForm({
     }));
 
     // Clear any previous error message when user is making changes
+    if (errorMessage) {
+      setErrorMessage("");
+    }
+  };
+
+  const handleNumericChange = (name: string) => (value: number | "") => {
+    setFormErrors((prev) => ({
+      ...prev,
+      [name]: value !== "" && value < 0,
+    }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+
     if (errorMessage) {
       setErrorMessage("");
     }
@@ -166,6 +173,12 @@ export default function LeaseForm({
         newErrors[field] = true;
         isValid = false;
       }
+    }
+
+    // Validate payment due day
+    if (formData.payment_due_day < 1 || formData.payment_due_day > 31) {
+      newErrors["payment_due_day"] = true;
+      isValid = false;
     }
 
     // Validate dates
@@ -328,7 +341,7 @@ export default function LeaseForm({
                     name="currency"
                     value={formData.currency}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-primary focus:border-primary"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     disabled={isLoading}
                   >
                     {currencyList().map((currency) => (
@@ -339,55 +352,33 @@ export default function LeaseForm({
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="rent_amount" className="mb-1 block">
-                    Rent Amount <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">{currencySymbol}</span>
-                    </div>
-                    <Input
-                      id="rent_amount"
-                      name="rent_amount"
-                      type="number"
-                      value={formData.rent_amount}
-                      onChange={handleChange}
-                      className={`pl-7 ${inputClass("rent_amount")}`}
-                      placeholder="0.00"
-                      disabled={isLoading}
-                      required
-                    />
-                  </div>
-                  {formErrors.rent_amount && (
-                    <p className="text-destructive text-xs mt-1">
-                      Valid rent amount is required
-                    </p>
-                  )}
+                  <CurrencyInput
+                    id="rent_amount"
+                    name="rent_amount"
+                    label="Rent Amount"
+                    required
+                    value={formData.rent_amount}
+                    onChange={handleNumericChange("rent_amount")}
+                    currency={formData.currency}
+                    currencySymbol={currencySymbol}
+                    disabled={isLoading}
+                    error={formErrors.rent_amount}
+                    errorMessage="Valid rent amount is required"
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="security_deposit" className="mb-1 block">
-                    Security Deposit
-                  </Label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500">{currencySymbol}</span>
-                    </div>
-                    <Input
-                      id="security_deposit"
-                      name="security_deposit"
-                      type="number"
-                      value={formData.security_deposit}
-                      onChange={handleChange}
-                      className={`pl-7 ${inputClass("security_deposit")}`}
-                      placeholder="0.00"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  {formErrors.security_deposit && (
-                    <p className="text-destructive text-xs mt-1">
-                      Security deposit cannot be negative
-                    </p>
-                  )}
+                  <CurrencyInput
+                    id="security_deposit"
+                    name="security_deposit"
+                    label="Security Deposit"
+                    value={formData.security_deposit}
+                    onChange={handleNumericChange("security_deposit")}
+                    currency={formData.currency}
+                    currencySymbol={currencySymbol}
+                    disabled={isLoading}
+                    error={formErrors.security_deposit}
+                    errorMessage="Security deposit cannot be negative"
+                  />
                 </div>
               </div>
 
@@ -402,7 +393,7 @@ export default function LeaseForm({
                     name="payment_frequency"
                     value={formData.payment_frequency}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border rounded focus:ring-primary focus:border-primary"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     disabled={isLoading}
                   >
                     {Constants.public.Enums.PAYMENT_FREQUENCY.map((f) => (
@@ -413,21 +404,19 @@ export default function LeaseForm({
                   </select>
                 </div>
                 <div>
-                  <Label htmlFor="payment_due_day" className="mb-1 block">
-                    Payment Due Day
-                  </Label>
-                  <Input
+                  <NumericInput
                     id="payment_due_day"
                     name="payment_due_day"
-                    type="number"
+                    label="Payment Due Day"
                     value={formData.payment_due_day}
-                    onChange={handleChange}
-                    className={inputClass("payment_due_day")}
+                    onChange={handleNumericChange("payment_due_day")}
                     min={1}
                     max={31}
+                    step={1}
                     disabled={
                       formData.payment_frequency !== "monthly" || isLoading
                     }
+                    className={inputClass("payment_due_day")}
                   />
                   {formErrors.payment_due_day && (
                     <p className="text-destructive text-xs mt-1">

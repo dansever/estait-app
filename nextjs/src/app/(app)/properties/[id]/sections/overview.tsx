@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
@@ -74,7 +74,8 @@ export default function Overview({
   };
 
   function AddressBlock({ rawAddress }: { rawAddress: any }) {
-    const [copied, setCopied] = useState(false);
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
 
     const fullAddress = [
       rawAddress.street
@@ -90,25 +91,36 @@ export default function Overview({
       .filter(Boolean)
       .join("\n");
 
-    const handleCopy = () => {
-      navigator.clipboard.writeText(fullAddress);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+    const handleCopy = (text: string) => {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopiedField(text);
+
+        if (timerRef.current) {
+          clearTimeout(timerRef.current);
+        }
+
+        timerRef.current = setTimeout(() => {
+          setCopiedField(null);
+          timerRef.current = null;
+        }, 2000);
+      });
     };
 
     return (
       <div
-        onClick={handleCopy}
-        className="relative group p-4 rounded-xl bg-gray-50 border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors"
+        onClick={() => handleCopy(fullAddress)}
+        className="relative group p-4 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors"
         title="Click to copy full address"
       >
         {/* Top-right icon */}
-        <div className="absolute top-2 right-2 p-1 rounded-full text-gray-500 group-hover:bg-gray-200 transition-colors">
-          {copied ? (
-            <Check className="h-4 w-4 text-green-500" />
-          ) : (
-            <Copy className="h-4 w-4" />
-          )}
+        <div className="absolute top-2 right-2">
+          <div className="h-8 w-8 rounded-full flex items-center justify-center text-gray-600 transition-all group-hover:scale-110 group-hover:bg-gray-200">
+            {copiedField === fullAddress ? (
+              <Check className="h-4 w-4 text-green-500" />
+            ) : (
+              <Copy className="h-4 w-4" />
+            )}
+          </div>
         </div>
 
         <div className="flex items-start gap-3">

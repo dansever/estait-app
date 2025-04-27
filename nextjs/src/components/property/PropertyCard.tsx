@@ -303,9 +303,6 @@ export default function PropertyCard({
                     {address}
                   </CardDescription>
                 </TooltipTrigger>
-                <TooltipContent>
-                  <p>{address}</p>
-                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

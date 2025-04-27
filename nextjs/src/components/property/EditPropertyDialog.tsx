@@ -18,6 +18,11 @@ import { currencyList } from "@/lib/constants";
 import { Card, CardContent } from "@/components/ui/card";
 import { createSPASassClient } from "@/lib/supabase/client";
 import AddressInput from "@/components/property/GoogleAddressInput";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { UnitInput } from "@/components/ui/unit-input";
+import { Label } from "@/components/ui/label";
+import { getCurrencySymbol } from "@/lib/formattingHelpers";
 
 // Define form state interface for better type safety
 interface PropertyFormState {
@@ -26,15 +31,15 @@ interface PropertyFormState {
   description: string;
   property_type: string;
   // Property Details
-  purchase_price: string;
+  purchase_price: number | "";
   currency: string;
-  size: string;
+  size: number | "";
   unit_system: string;
   // Property Features
-  bedrooms: string;
-  bathrooms: string;
-  parking_spaces: string;
-  year_built: string;
+  bedrooms: number | "";
+  bathrooms: number | "";
+  parking_spaces: number | "";
+  year_built: number | "";
   // Property Address
   street: string;
   street_number: string;
@@ -49,7 +54,7 @@ type EditPropertyDialogProps = {
   data: EnrichedProperty;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: () => void; // new
+  onSave: () => void;
 };
 
 export default function EditPropertyDialog({
@@ -74,46 +79,32 @@ export default function EditPropertyDialog({
 
     purchase_price:
       data.rawProperty.purchase_price !== null
-        ? String(data.rawProperty.purchase_price)
+        ? data.rawProperty.purchase_price
         : "",
-    size: data.rawProperty.size !== null ? String(data.rawProperty.size) : "",
+    size: data.rawProperty.size !== null ? data.rawProperty.size : "",
     bedrooms:
-      data.rawProperty.bedrooms !== null
-        ? String(data.rawProperty.bedrooms)
-        : "",
+      data.rawProperty.bedrooms !== null ? data.rawProperty.bedrooms : "",
     bathrooms:
-      data.rawProperty.bathrooms !== null
-        ? String(data.rawProperty.bathrooms)
-        : "",
+      data.rawProperty.bathrooms !== null ? data.rawProperty.bathrooms : "",
     parking_spaces:
       data.rawProperty.parking_spaces !== null
-        ? String(data.rawProperty.parking_spaces)
-        : "",
+        ? data.rawProperty.parking_spaces
+        : 0,
     year_built:
-      data.rawProperty.year_built !== null
-        ? String(data.rawProperty.year_built)
-        : "",
+      data.rawProperty.year_built !== null ? data.rawProperty.year_built : "",
   });
 
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    const numericFields = [
-      "purchase_price",
-      "size",
-      "bedrooms",
-      "bathrooms",
-      "parking_spaces",
-      "year_built",
-    ];
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    // For numeric fields, ensure values are not negative
-    if (numericFields.includes(name) && value !== "") {
-      const numValue = Number(value);
-      if (numValue < 0) return; // Prevent negative values
-    }
-
+  const handleNumericChange = (name: string) => (value: number | "") => {
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -130,16 +121,14 @@ export default function EditPropertyDialog({
         property_type: formData.property_type,
         currency: formData.currency,
         unit_system: formData.unit_system,
-        purchase_price: formData.purchase_price
-          ? Number(formData.purchase_price)
-          : null,
-        size: formData.size ? Number(formData.size) : null,
-        bedrooms: formData.bedrooms ? Number(formData.bedrooms) : null,
-        bathrooms: formData.bathrooms ? Number(formData.bathrooms) : null,
-        parking_spaces: formData.parking_spaces
-          ? Number(formData.parking_spaces)
-          : 0, // not nullable
-        year_built: formData.year_built ? Number(formData.year_built) : null,
+        purchase_price:
+          formData.purchase_price !== "" ? formData.purchase_price : null,
+        size: formData.size !== "" ? formData.size : null,
+        bedrooms: formData.bedrooms !== "" ? formData.bedrooms : null,
+        bathrooms: formData.bathrooms !== "" ? formData.bathrooms : null,
+        parking_spaces:
+          formData.parking_spaces !== "" ? formData.parking_spaces : 0, // not nullable
+        year_built: formData.year_built !== "" ? formData.year_built : null,
       };
 
       const addressUpdate = {
@@ -174,11 +163,6 @@ export default function EditPropertyDialog({
     }
   };
 
-  const getCurrencySymbol = (currencyCode: string) => {
-    const currency = currencyList().find((c) => c.code === currencyCode);
-    return currency ? currency.symbol : "";
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
@@ -197,9 +181,7 @@ export default function EditPropertyDialog({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Title
-                  </label>
+                  <Label className="mb-1">Title</Label>
                   <Input
                     name="title"
                     value={formData.title}
@@ -207,9 +189,7 @@ export default function EditPropertyDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Description
-                  </label>
+                  <Label className="mb-1">Description</Label>
                   <Input
                     name="description"
                     value={formData.description}
@@ -220,14 +200,12 @@ export default function EditPropertyDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Property Type
-                  </label>
+                  <Label className="mb-1">Property Type</Label>
                   <select
                     name="property_type"
                     value={formData.property_type}
                     onChange={handleChange}
-                    className="w-full border rounded px-2 py-2"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     {Constants.public.Enums.PROPERTY_TYPE.map((type) => (
                       <option key={type} value={type}>
@@ -237,45 +215,37 @@ export default function EditPropertyDialog({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Year Built
-                  </label>
-                  <Input
+                  <NumericInput
+                    label="Year Built"
                     name="year_built"
-                    type="number"
-                    value={formData.year_built}
-                    onChange={handleChange}
+                    value={formData.year_built === "" ? 0 : formData.year_built}
+                    onChange={handleNumericChange("year_built")}
                     step={1}
-                    min={0}
+                    min={1800}
+                    max={new Date().getFullYear() + 10}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Purchase Price
-                  </label>
+                <div className="space-y-2">
+                  <Label className="mb-1">Purchase Price</Label>
                   <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500">
-                          {getCurrencySymbol(formData.currency)}
-                        </span>
-                      </div>
-                      <Input
+                    <div className="flex-1">
+                      <CurrencyInput
+                        id="purchase_price"
                         name="purchase_price"
-                        type="number"
                         value={formData.purchase_price}
-                        onChange={handleChange}
-                        className="pl-7 w-full"
+                        onChange={handleNumericChange("purchase_price")}
+                        currency={formData.currency}
+                        currencySymbol={getCurrencySymbol(formData.currency)}
                       />
                     </div>
                     <select
                       name="currency"
                       value={formData.currency}
                       onChange={handleChange}
-                      className="min-w-[100px] px-2 py-2 border rounded"
+                      className="min-w-[100px] h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       {currencyList().map((currency) => (
                         <option key={currency.code} value={currency.code}>
@@ -285,32 +255,24 @@ export default function EditPropertyDialog({
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Property Size
-                  </label>
+                <div className="space-y-2">
+                  <Label className="mb-1">Property Size</Label>
                   <div className="flex gap-2">
-                    <div className="flex-1 relative">
-                      <Input
+                    <div className="flex-1">
+                      <UnitInput
                         name="size"
-                        type="number"
                         value={formData.size}
-                        onChange={handleChange}
-                        className={`${
-                          formData.unit_system === "metric" ? "pr-8" : "pr-10"
-                        } w-full`}
+                        onChange={handleNumericChange("size")}
+                        unitSymbol={
+                          formData.unit_system === "metric" ? "m²" : "ft²"
+                        }
                       />
-                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500">
-                          {formData.unit_system === "metric" ? "m²" : "ft²"}
-                        </span>
-                      </div>
                     </div>
                     <select
                       name="unit_system"
                       value={formData.unit_system}
                       onChange={handleChange}
-                      className="min-w-[80px] px-2 py-2 border rounded"
+                      className="min-w-[80px] h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
                       <option value="metric">m²</option>
                       <option value="imperial">ft²</option>
@@ -321,42 +283,40 @@ export default function EditPropertyDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Bedrooms
-                  </label>
-                  <Input
+                  <NumericInput
+                    label="Bedrooms"
                     name="bedrooms"
-                    type="number"
-                    value={formData.bedrooms}
-                    onChange={handleChange}
+                    value={formData.bedrooms === "" ? 0 : formData.bedrooms}
+                    onChange={handleNumericChange("bedrooms")}
                     step={0.5}
                     min={0}
+                    max={20}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Bathrooms
-                  </label>
-                  <Input
+                  <NumericInput
+                    label="Bathrooms"
                     name="bathrooms"
-                    type="number"
-                    value={formData.bathrooms}
-                    onChange={handleChange}
+                    value={formData.bathrooms === "" ? 0 : formData.bathrooms}
+                    onChange={handleNumericChange("bathrooms")}
                     step={0.5}
                     min={0}
+                    max={20}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Parking Spaces
-                  </label>
-                  <Input
+                  <NumericInput
+                    label="Parking Spaces"
                     name="parking_spaces"
-                    type="number"
-                    value={formData.parking_spaces}
-                    onChange={handleChange}
+                    value={
+                      formData.parking_spaces === ""
+                        ? 0
+                        : formData.parking_spaces
+                    }
+                    onChange={handleNumericChange("parking_spaces")}
                     step={1}
                     min={0}
+                    max={20}
                   />
                 </div>
               </div>
@@ -391,9 +351,7 @@ export default function EditPropertyDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div className="md:col-span-1">
-                  <label className="block text-sm font-medium mb-1">
-                    Street
-                  </label>
+                  <Label className="mb-1">Street</Label>
                   <Input
                     name="street"
                     value={formData.street}
@@ -401,9 +359,7 @@ export default function EditPropertyDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Street Number
-                  </label>
+                  <Label className="mb-1">Street Number</Label>
                   <Input
                     name="street_number"
                     value={formData.street_number}
@@ -411,9 +367,7 @@ export default function EditPropertyDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Apt. Number
-                  </label>
+                  <Label className="mb-1">Apt. Number</Label>
                   <Input
                     name="apartment_number"
                     value={formData.apartment_number}
@@ -424,7 +378,7 @@ export default function EditPropertyDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">City</label>
+                  <Label className="mb-1">City</Label>
                   <Input
                     name="city"
                     value={formData.city}
@@ -432,9 +386,7 @@ export default function EditPropertyDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    State
-                  </label>
+                  <Label className="mb-1">State</Label>
                   <Input
                     name="state"
                     value={formData.state}
@@ -445,9 +397,7 @@ export default function EditPropertyDialog({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Country
-                  </label>
+                  <Label className="mb-1">Country</Label>
                   <Input
                     name="country"
                     value={formData.country}
@@ -455,9 +405,7 @@ export default function EditPropertyDialog({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Zip Code
-                  </label>
+                  <Label className="mb-1">Zip Code</Label>
                   <Input
                     name="zip_code"
                     value={formData.zip_code}

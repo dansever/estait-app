@@ -18,10 +18,8 @@ import {
   Building,
   MapPin,
   Home,
-  Ruler,
   Calendar,
   User,
-  DollarSign,
   Car,
   Toilet,
 } from "lucide-react";
@@ -30,6 +28,11 @@ import { createSPASassClient } from "@/lib/supabase/client";
 import { Constants } from "@/lib/types";
 import { currencyList } from "@/lib/constants";
 import AddressInput from "@/components/property/GoogleAddressInput";
+import { Label } from "@/components/ui/label";
+import { NumericInput } from "@/components/ui/numeric-input";
+import { CurrencyInput } from "@/components/ui/currency-input";
+import { UnitInput } from "@/components/ui/unit-input";
+import { getCurrencySymbol } from "@/lib/formattingHelpers";
 
 export default function AddPropertyPage() {
   const { user } = useGlobal();
@@ -40,15 +43,15 @@ export default function AddPropertyPage() {
     description: "",
     property_type: "house",
     // Property Details
-    purchase_price: "",
+    purchase_price: "" as number | "",
     currency: "USD",
-    size: "",
+    size: "" as number | "",
     unit_system: "metric",
     //Property Features
-    bedrooms: "",
-    bathrooms: "",
-    parking_spaces: "",
-    year_built: "",
+    bedrooms: "" as number | "",
+    bathrooms: "" as number | "",
+    parking_spaces: "" as number | "",
+    year_built: "" as number | "",
     // Property Address
     street: "",
     street_number: "",
@@ -81,21 +84,13 @@ export default function AddPropertyPage() {
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    const numericFields = [
-      "purchase_price",
-      "size",
-      "bedrooms",
-      "bathrooms",
-      "parking_spaces",
-      "year_built",
-    ];
+    setForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    // For numeric fields, ensure values are not negative
-    if (numericFields.includes(name) && value !== "") {
-      const numValue = Number(value);
-      if (numValue < 0) return; // Prevent negative values
-    }
-
+  const handleNumericChange = (name: string) => (value: number | "") => {
     setForm((prev) => ({
       ...prev,
       [name]: value,
@@ -176,16 +171,16 @@ export default function AddPropertyPage() {
         description: form.description,
         property_type: form.property_type,
         // Property Details
-        purchase_price: form.purchase_price ? Number(form.purchase_price) : 0,
+        purchase_price: form.purchase_price !== "" ? form.purchase_price : 0,
         currency: form.currency,
-        size: form.size ? Number(form.size) : 0,
+        size: form.size !== "" ? form.size : 0,
         unit_system: form.unit_system,
         address_id: address.id,
         // Property Features
-        bedrooms: form.bedrooms ? Number(form.bedrooms) : 0,
-        bathrooms: form.bathrooms ? Number(form.bathrooms) : 0,
-        parking_spaces: form.parking_spaces ? Number(form.parking_spaces) : 0,
-        year_built: form.year_built ? Number(form.year_built) : 0,
+        bedrooms: form.bedrooms !== "" ? form.bedrooms : 0,
+        bathrooms: form.bathrooms !== "" ? form.bathrooms : 0,
+        parking_spaces: form.parking_spaces !== "" ? form.parking_spaces : 0,
+        year_built: form.year_built !== "" ? form.year_built : 0,
       });
 
       if (!newProperty?.id) throw new Error("Property creation failed");
@@ -196,11 +191,6 @@ export default function AddPropertyPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getCurrencySymbol = (currencyCode: string) => {
-    const currency = currencyList().find((c) => c.code === currencyCode);
-    return currency ? currency.symbol : "$";
   };
 
   return (
@@ -360,34 +350,19 @@ export default function AddPropertyPage() {
                   <h3 className="text-md font-medium text-gray-700 border-b pb-2">
                     Property Details
                   </h3>
+                  {/* TODO - manually insert numeric values in form */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="flex space-x-3">
                       <div className="flex-1">
-                        <div className="flex flex-col space-y-1.5">
-                          <label
-                            htmlFor="purchase_price"
-                            className="text-sm font-medium text-gray-700"
-                          >
-                            Purchase Price
-                          </label>
-                          <div className="relative">
-                            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500">
-                                {getCurrencySymbol(form.currency)}
-                              </span>
-                            </div>
-                            <Input
-                              id="purchase_price"
-                              name="purchase_price"
-                              type="number"
-                              value={form.purchase_price}
-                              onChange={handleChange}
-                              className="pl-7"
-                              placeholder="0.00"
-                              min="0"
-                            />
-                          </div>
-                        </div>
+                        <CurrencyInput
+                          id="purchase_price"
+                          name="purchase_price"
+                          label="Purchase Price"
+                          value={form.purchase_price}
+                          onChange={handleNumericChange("purchase_price")}
+                          currency={form.currency}
+                          currencySymbol={getCurrencySymbol(form.currency)}
+                        />
                       </div>
                       <div className="w-1/3">
                         <SelectField
@@ -407,33 +382,16 @@ export default function AddPropertyPage() {
                     </div>
                     <div className="flex space-x-3">
                       <div className="flex-1">
-                        <div className="flex flex-col space-y-1.5">
-                          <label
-                            htmlFor="size"
-                            className="text-sm font-medium text-gray-700"
-                          >
-                            Property Size
-                          </label>
-                          <div className="relative">
-                            <Input
-                              id="size"
-                              name="size"
-                              type="number"
-                              value={form.size}
-                              onChange={handleChange}
-                              className={`${
-                                form.unit_system === "metric" ? "pr-8" : "pr-10"
-                              }`}
-                              placeholder="88"
-                              min="0"
-                            />
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                              <span className="text-gray-500">
-                                {form.unit_system === "metric" ? "m²" : "ft²"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                        <UnitInput
+                          id="size"
+                          name="size"
+                          label="Property Size"
+                          value={form.size}
+                          onChange={handleNumericChange("size")}
+                          unitSymbol={
+                            form.unit_system === "metric" ? "m²" : "ft²"
+                          }
+                        />
                       </div>
                       <div className="w-1/3">
                         <SelectField
@@ -457,56 +415,106 @@ export default function AddPropertyPage() {
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {/* Bedrooms */}
-                    <InputField
-                      label="Bedrooms"
-                      name="bedrooms"
-                      type="number"
-                      value={form.bedrooms ?? ""}
-                      onChange={handleChange}
-                      placeholder="0"
-                      icon={<User className="h-4 w-4 text-gray-400" />}
-                      step="0.5"
-                      min="0"
-                    />
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="bedrooms"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Bedrooms
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                          <User className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <NumericInput
+                          id="bedrooms"
+                          name="bedrooms"
+                          value={form.bedrooms === "" ? 0 : form.bedrooms}
+                          onChange={handleNumericChange("bedrooms")}
+                          className="pl-10"
+                          step={0.5}
+                          min={0}
+                          max={20}
+                        />
+                      </div>
+                    </div>
 
                     {/* Bathrooms */}
-                    <InputField
-                      label="Bathrooms"
-                      name="bathrooms"
-                      type="number"
-                      value={form.bathrooms ?? ""}
-                      onChange={handleChange}
-                      placeholder="0"
-                      icon={<Toilet className="h-4 w-4 text-gray-400" />}
-                      min="0"
-                      step="0.5"
-                    />
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="bathrooms"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Bathrooms
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                          <Toilet className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <NumericInput
+                          id="bathrooms"
+                          name="bathrooms"
+                          value={form.bathrooms === "" ? 0 : form.bathrooms}
+                          onChange={handleNumericChange("bathrooms")}
+                          className="pl-10"
+                          step={0.5}
+                          min={0}
+                          max={20}
+                        />
+                      </div>
+                    </div>
 
                     {/* Parking Spaces */}
-                    <InputField
-                      label="Parking Spaces"
-                      name="parking_spaces"
-                      type="number"
-                      value={form.parking_spaces ?? ""}
-                      onChange={handleChange}
-                      placeholder="0"
-                      icon={<Car className="h-4 w-4 text-gray-400" />}
-                      min="0"
-                      step="1"
-                    />
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="parking_spaces"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Parking Spaces
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                          <Car className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <NumericInput
+                          id="parking_spaces"
+                          name="parking_spaces"
+                          value={
+                            form.parking_spaces === "" ? 0 : form.parking_spaces
+                          }
+                          onChange={handleNumericChange("parking_spaces")}
+                          className="pl-10"
+                          step={1}
+                          min={0}
+                          max={20}
+                        />
+                      </div>
+                    </div>
 
                     {/* Year Built */}
-                    <InputField
-                      label="Year Built"
-                      name="year_built"
-                      type="number"
-                      value={form.year_built ?? ""}
-                      onChange={handleChange}
-                      placeholder="1996"
-                      icon={<Calendar className="h-4 w-4 text-gray-400" />}
-                      min="0"
-                      step="1"
-                    />
+                    <div className="space-y-1.5">
+                      <Label
+                        htmlFor="year_built"
+                        className="text-sm font-medium text-gray-700"
+                      >
+                        Year Built
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 z-10">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                        </div>
+                        <NumericInput
+                          id="year_built"
+                          name="year_built"
+                          value={form.year_built === "" ? 0 : form.year_built}
+                          onChange={handleNumericChange("year_built")}
+                          className="pl-10"
+                          step={1}
+                          min={1800}
+                          max={new Date().getFullYear() + 10}
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

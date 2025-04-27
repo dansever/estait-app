@@ -32,13 +32,10 @@ import {
   Home,
   Building,
   Settings,
-  X,
   Plus,
   Trash,
   Search,
   LoaderCircle,
-  Eye,
-  EyeOff,
 } from "lucide-react";
 import SearchBar from "@/components/layout/SearchBar";
 import PropertyCard from "@/components/property/PropertyCard";
@@ -618,34 +615,6 @@ const ComponentsPage = () => {
                     </svg>
                   </button>
                 ))}
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="percentage-input">Percentage Input</Label>
-              <div className="relative">
-                <input
-                  type="number"
-                  id="percentage-input"
-                  className="pr-12 h-10 rounded-md border border-input w-full focus:ring-primary-500 focus:border-primary-500"
-                  min="0"
-                  max="100"
-                  value={rating * 20}
-                  onChange={(e) =>
-                    setRating(
-                      Math.min(5, Math.max(0, parseInt(e.target.value) / 20))
-                    )
-                  }
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                  <span className="text-gray-500 font-medium">%</span>
-                </div>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                <div
-                  className="bg-primary-600 h-2.5 rounded-full transition-all duration-300 ease-out"
-                  style={{ width: `${rating * 20}%` }}
-                ></div>
               </div>
             </div>
           </div>

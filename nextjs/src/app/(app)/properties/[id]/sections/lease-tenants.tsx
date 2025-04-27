@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/formattingHelpers";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import EditAddLeaseDialog from "@/components/property/lease/EditAddLeaseDialog";
 import { Progress } from "@/components/ui/progress";
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
+import { motion } from "framer-motion";
 import {
   FaWhatsapp,
   FaPhone,
@@ -53,11 +54,11 @@ export default function LeaseTenants({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [selectedLeaseForEdit, setSelectedLeaseForEdit] =
     useState<LeaseRow | null>(null);
-  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
-  const [copiedPhone, setCopiedPhone] = useState<string | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const [expandedLeases, setExpandedLeases] = useState<{
     [key: number]: boolean;
   }>({});
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   const { toast } = useToast();
   const pastLeases = rawPastLeases ?? [];
 
@@ -122,22 +123,22 @@ export default function LeaseTenants({
     }
   }, [leaseStatus]);
 
-  // Copy text to clipboard
-  const copyToClipboard = (text: string, type: "email" | "phone") => {
+  const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
-      if (type === "email") {
-        setCopiedEmail(text);
-        setTimeout(() => setCopiedEmail(null), 2000);
-      } else {
-        setCopiedPhone(text);
-        setTimeout(() => setCopiedPhone(null), 2000);
+      setCopiedField(text);
+
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
       }
+
+      timerRef.current = setTimeout(() => {
+        setCopiedField(null);
+        timerRef.current = null;
+      }, 2500);
 
       toast({
         title: "Copied to clipboard",
-        description: `${
-          type === "email" ? "Email" : "Phone"
-        } has been copied to clipboard.`,
+        description: text,
         duration: 2000,
       });
     });
@@ -151,257 +152,285 @@ export default function LeaseTenants({
 
   return (
     <div className="space-y-6">
-      {/* Two cards side by side OR fallback if no active lease */}
+      {/* Main Lease & Tenant Card */}
       {rawActiveLease ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Lease Details Card */}
-          <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-            <CardHeader className="pb-2 border-b">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
-                    <Key className="h-5 w-5 text-primary-500" />
-                    Lease Details
-                  </CardTitle>
-                  <p className="text-primary-700/80 mt-1 text-sm">
-                    Current lease information and payment details
-                  </p>
-                </div>
+        <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
+          <CardHeader className="pb-2 border-b">
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                  <Key className="h-5 w-5 text-primary-500" />
+                  Lease & Tenant
+                </CardTitle>
+                <p className="text-primary-700/80 mt-1 text-sm">
+                  Manage current lease information and tenant details
+                </p>
+              </div>
+              <div className="flex gap-2">
                 <Button
-                  variant="outline"
-                  size="sm"
+                  variant="default"
                   onClick={() => {
                     setSelectedLeaseForEdit(rawActiveLease);
                     setIsEditOpen(true);
                   }}
-                  className="gap-2 shadow-sm border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200"
                 >
-                  <Pencil className="h-4 w-4 text-gray-500" />
+                  <Pencil className="mr-2 h-4 w-4" />
                   <span>Edit Lease</span>
                 </Button>
               </div>
-              <div
-                className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium rounded-bl-md ${statusColor}`}
-              >
-                {leaseStatus}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Lease Progress */}
-              {start &&
-                end &&
-                isValid(start) &&
-                isValid(end) &&
-                rawActiveLease.is_lease_active && (
-                  <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
-                    <div className="flex justify-between text-xs text-gray-600 mb-1.5">
-                      <span>{start && format(start, "MMM d, yyyy")}</span>
-                      <span>{end && format(end, "MMM d, yyyy")}</span>
-                    </div>
-                    <Progress value={percentComplete} className="h-2 mb-2" />
+            </div>
+            <div
+              className={`absolute top-0 right-0 px-3 py-1 text-xs font-medium rounded-bl-md ${statusColor}`}
+            >
+              {leaseStatus}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
+              {/* Lease Details Section */}
+              <div>
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-gray-700">
+                  <Key className="h-5 w-5 text-primary-500" />
+                  Lease Details
+                </h3>
 
-                    <div className="flex items-center gap-2 mt-1">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <p className="text-xs">
-                        {completedDays} of {totalDays} days
-                        <span className="ml-1 font-medium text-primary-700">
-                          ({percentComplete.toFixed(0)}%)
-                        </span>
-                      </p>
-                    </div>
-                    {daysRemaining > 0 && (
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Clock className="h-4 w-4 text-gray-400" />
-                        <p className="text-xs text-gray-600">
-                          {daysRemaining} {daysRemaining === 1 ? "day" : "days"}{" "}
-                          remaining
+                <div className="space-y-4">
+                  {/* Lease Progress */}
+                  {start &&
+                    end &&
+                    isValid(start) &&
+                    isValid(end) &&
+                    rawActiveLease.is_lease_active && (
+                      <div className="p-4 rounded-xl bg-gray-50 border border-gray-100">
+                        <div className="flex justify-between text-xs text-gray-600 mb-1.5">
+                          <span>{start && format(start, "MMM d, yyyy")}</span>
+                          <span>{end && format(end, "MMM d, yyyy")}</span>
+                        </div>
+                        <Progress
+                          value={percentComplete}
+                          className="h-2 mb-2"
+                        />
+
+                        <div className="flex items-center gap-2 mt-1">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <p className="text-xs">
+                            {completedDays} of {totalDays} days
+                            <span className="ml-1 font-medium text-primary-700">
+                              ({percentComplete.toFixed(0)}%)
+                            </span>
+                          </p>
+                        </div>
+                        {daysRemaining > 0 && (
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <p className="text-xs text-gray-600">
+                              {daysRemaining}{" "}
+                              {daysRemaining === 1 ? "day" : "days"} remaining
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  {/* Main Lease Details */}
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <Banknote className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          Rent Amount
+                        </p>
+                        <p className="text-base font-medium">
+                          {formatCurrency(
+                            rawActiveLease.rent_amount,
+                            rawActiveLease.currency
+                          )}
+                          <span className="text-xs text-gray-500 ml-1">
+                            / {rawActiveLease.payment_frequency}
+                          </span>
                         </p>
                       </div>
-                    )}
-                  </div>
-                )}
-
-              {/* Main Lease Details */}
-              <div className="space-y-3">
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <Banknote className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Rent Amount
-                    </p>
-                    <p className="text-base font-medium">
-                      {formatCurrency(
-                        rawActiveLease.rent_amount,
-                        rawActiveLease.currency
-                      )}
-                      <span className="text-xs text-gray-500 ml-1">
-                        / {rawActiveLease.payment_frequency}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-
-                {rawActiveLease.payment_frequency === "monthly" && (
-                  <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                    <CalendarClock className="h-5 w-5 text-gray-400 mt-0.5" />
-                    <div>
-                      <p className="text-xs font-medium text-gray-500">
-                        Payment Due
-                      </p>
-                      <p className="text-base font-medium">
-                        Day {rawActiveLease.payment_due_day} of each month
-                      </p>
                     </div>
-                  </div>
-                )}
 
-                <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
-                  <FaShieldAlt className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-xs font-medium text-gray-500">
-                      Security Deposit
-                    </p>
-                    <p className="text-base font-medium">
-                      {formatCurrency(
-                        rawActiveLease.security_deposit,
-                        rawActiveLease.currency
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Tenant Details Card */}
-          <Card className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 border-0 bg-white">
-            <CardHeader className="pb-2 border-b">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
-                    <CircleUser className="h-5 w-5 text-primary-500" />
-                    Tenant Details
-                  </CardTitle>
-                  <p className="text-primary-700/80 mt-1 text-sm">
-                    Contact information for the current tenant
-                  </p>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {rawActiveLease.tenant_first_name ? (
-                <>
-                  <div className="flex flex-col items-center justify-center py-3">
-                    <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mb-3">
-                      <FaUser className="h-8 w-8" />
-                    </div>
-                    <h3 className="text-lg font-medium">
-                      {rawActiveLease.tenant_first_name}{" "}
-                      {rawActiveLease.tenant_last_name}
-                    </h3>
-                    <p className="text-sm text-gray-500">Current Tenant</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-2 mt-4">
-                    {rawActiveLease.tenant_email && (
-                      <button
-                        onClick={() =>
-                          copyToClipboard(rawActiveLease.tenant_email, "email")
-                        }
-                        className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
-                        title="Copy email"
-                      >
-                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          <Mail className="h-4 w-4" />
+                    {rawActiveLease.payment_frequency === "monthly" && (
+                      <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                        <CalendarClock className="h-5 w-5 text-gray-400 mt-0.5" />
+                        <div>
+                          <p className="text-xs font-medium text-gray-500">
+                            Payment Due
+                          </p>
+                          <p className="text-base font-medium">
+                            Day {rawActiveLease.payment_due_day} of each month
+                          </p>
                         </div>
-                        <span className="text-sm transition-colors flex-1">
-                          {rawActiveLease.tenant_email}
-                        </span>
-                        <div className="h-8 w-8 rounded-full group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
-                          {copiedEmail === rawActiveLease.tenant_email ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </div>
-                      </button>
-                    )}
-
-                    {rawActiveLease.tenant_phone && (
-                      <div className="space-y-2">
-                        <button
-                          onClick={() =>
-                            copyToClipboard(
-                              rawActiveLease.tenant_phone,
-                              "phone"
-                            )
-                          }
-                          className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
-                          title="Copy phone number"
-                          type="button"
-                        >
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                            <Phone className="h-4 w-4" />
-                          </div>
-                          <span className="text-sm transition-colors flex-1">
-                            {rawActiveLease.tenant_phone}
-                          </span>
-                          <div className="h-8 w-8 rounded-full group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
-                            {copiedPhone === rawActiveLease.tenant_phone ? (
-                              <Check className="h-4 w-4 text-green-500" />
-                            ) : (
-                              <Copy className="h-4 w-4" />
-                            )}
-                          </div>
-                        </button>
-
-                        {typeof rawActiveLease.tenant_phone === "string" &&
-                          rawActiveLease.tenant_phone.replace(/\D/g, "")
-                            .length > 5 && (
-                            <a
-                              href={`https://wa.me/${rawActiveLease.tenant_phone.replace(
-                                /\D/g,
-                                ""
-                              )}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-3 p-3 rounded-[45px] hover:bg-green-50 transition-colors group"
-                            >
-                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                                <FaWhatsapp className="h-4 w-4" />
-                              </div>
-                              <span className="text-sm group-hover:text-green-600 transition-colors">
-                                Message on WhatsApp
-                              </span>
-                            </a>
-                          )}
                       </div>
                     )}
+
+                    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                      <FaShieldAlt className="h-5 w-5 text-gray-400 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          Security Deposit
+                        </p>
+                        <p className="text-base font-medium">
+                          {formatCurrency(
+                            rawActiveLease.security_deposit,
+                            rawActiveLease.currency
+                          )}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
-                    <FaUser className="h-8 w-8" />
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-500">
-                    No Tenant Information
-                  </h3>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Add a lease to record tenant details
-                  </p>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+              </div>
+
+              {/* Tenant Details Section */}
+              <div className="border-t md:border-t-0 md:border-l border-gray-100 pt-6 md:pt-0 md:pl-6">
+                <h3 className="text-lg font-medium mb-4 flex items-center gap-2 text-gray-700">
+                  <CircleUser className="h-5 w-5 text-primary-500" />
+                  Tenant Details
+                </h3>
+
+                <div className="space-y-4">
+                  {rawActiveLease.tenant_first_name ? (
+                    <>
+                      <div className="flex flex-col items-center justify-center py-3">
+                        <div className="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 mb-3">
+                          <FaUser className="h-8 w-8" />
+                        </div>
+                        <h3 className="text-lg font-medium">
+                          {rawActiveLease.tenant_first_name}{" "}
+                          {rawActiveLease.tenant_last_name}
+                        </h3>
+                        <p className="text-sm text-gray-500">Current Tenant</p>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2 mt-4">
+                        {rawActiveLease.tenant_email && (
+                          <button
+                            onClick={() =>
+                              copyToClipboard(rawActiveLease.tenant_email)
+                            }
+                            className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
+                            title="Copy email"
+                          >
+                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                              <Mail className="h-4 w-4" />
+                            </div>
+                            <span className="text-sm transition-colors flex-1">
+                              {rawActiveLease.tenant_email}
+                            </span>
+                            <div className="h-8 w-8 rounded-full group-hover:scale-110 group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
+                              <motion.div
+                                key={
+                                  copiedField === rawActiveLease.tenant_email
+                                    ? "check"
+                                    : "copy"
+                                }
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.8, opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                              >
+                                {copiedField === rawActiveLease.tenant_email ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </motion.div>
+                            </div>
+                          </button>
+                        )}
+
+                        {rawActiveLease.tenant_phone && (
+                          <div className="space-y-2">
+                            <button
+                              onClick={() =>
+                                copyToClipboard(
+                                  rawActiveLease.tenant_phone,
+                                  "phone"
+                                )
+                              }
+                              className="w-full text-left flex items-center gap-3 p-3 rounded-[45px] hover:bg-gray-50 transition-colors group"
+                              title="Copy phone number"
+                              type="button"
+                            >
+                              <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                <Phone className="h-4 w-4" />
+                              </div>
+                              <span className="text-sm transition-colors flex-1">
+                                {rawActiveLease.tenant_phone}
+                              </span>
+                              <div className="h-8 w-8 rounded-full group-hover:scale-110 group-hover:bg-gray-200 flex items-center justify-center text-gray-600 transition-colors">
+                                {" "}
+                                {copiedField === rawActiveLease.tenant_phone ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : (
+                                  <Copy className="h-4 w-4" />
+                                )}
+                              </div>
+                            </button>
+
+                            {typeof rawActiveLease.tenant_phone === "string" &&
+                              rawActiveLease.tenant_phone.replace(/\D/g, "")
+                                .length > 5 && (
+                                <a
+                                  href={`https://wa.me/${rawActiveLease.tenant_phone.replace(
+                                    /\D/g,
+                                    ""
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-3 p-3 rounded-[45px] hover:bg-green-50 transition-colors group"
+                                >
+                                  <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-green-600">
+                                    <FaWhatsapp className="h-4 w-4" />
+                                  </div>
+                                  <span className="text-sm group-hover:text-green-600 transition-colors">
+                                    Message on WhatsApp
+                                  </span>
+                                </a>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                      <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-3">
+                        <FaUser className="h-8 w-8" />
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-500">
+                        No Tenant Information
+                      </h3>
+                      <p className="text-sm text-gray-400 mt-1">
+                        Edit the lease to add tenant details
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <Card className="overflow-hidden shadow-md border-0 bg-white">
           <CardHeader className="pb-2 border-b">
-            <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
-              <Key className="h-5 w-5 text-primary-500" />
-              Lease Information
-            </CardTitle>
+            <div className="flex justify-between items-start">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-xl font-heading font-semibold text-text-headline">
+                  <Key className="h-5 w-5 text-primary-500" />
+                  Lease & Tenant
+                </CardTitle>
+                <p className="text-primary-700/80 mt-1 text-sm">
+                  Add lease information and tenant details
+                </p>
+              </div>
+              <Button variant="default" onClick={() => setIsAddOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Lease
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-12 text-center">
