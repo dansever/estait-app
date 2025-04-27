@@ -37,7 +37,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
       <AppNavBar
-        productName={productName}
         user={user}
         toggleSidebar={toggleSidebar}
         isSidebarOpen={isSidebarOpen}

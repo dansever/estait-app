@@ -169,7 +169,7 @@ export default function Home() {
             href="/auth/register"
             className="mt-8 inline-flex items-center px-6 py-3 rounded-lg bg-white text-primary-600 font-medium hover:bg-primary-50 transition-colors"
           >
-            Get Started Now
+            Sign Up
             <ArrowRight className="ml-2 h-5 w-5" />
           </Link>
         </div>

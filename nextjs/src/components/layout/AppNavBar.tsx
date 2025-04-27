@@ -2,13 +2,13 @@
 
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
-import { Settings, LogOut, Menu } from "lucide-react";
+import { useRouter } from "next/navigation"; // Add this import at the top
 import Link from "next/link";
+import { Settings, LogOut, Menu } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import SearchBar, { Action } from "./SearchBar";
 
 interface AppNavBarProps {
-  productName?: string;
   user: any;
   toggleSidebar: () => void;
   isSidebarOpen?: boolean;
@@ -55,7 +55,6 @@ const defaultActions: Action[] = [
 ];
 
 export default function AppNavBar({
-  productName,
   user,
   toggleSidebar,
   isSidebarOpen = false,
@@ -64,6 +63,7 @@ export default function AppNavBar({
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter(); // initialize Next.js router
 
   // Handle user dropdown clicks outside
   useEffect(() => {
@@ -109,6 +109,7 @@ export default function AppNavBar({
     try {
       const client = await createSPASassClient();
       await client.logout();
+      router.push("/"); // ✅ After successful logout, go to "/"
     } catch (error) {
       console.error("Error logging out:", error);
     }
