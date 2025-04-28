@@ -178,9 +178,9 @@ export default function Overview({
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will permanently delete "
-              {rawProperty.title || "this property"}" and all associated data.
-              This action cannot be undone.
+              This action will permanently delete &quot;
+              {rawProperty.title || "this property"}&quot; and all associated
+              data. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

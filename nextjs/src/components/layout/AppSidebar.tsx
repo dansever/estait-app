@@ -1,38 +1,38 @@
 "use client";
 
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarMenu,
-  SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuItem,
   SidebarMenuSub,
-  SidebarMenuSubItem,
   SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import { useGlobal } from "@/lib/context/GlobalContext";
-import { useEffect, useState } from "react";
+import type { PropertyRow } from "@/lib/enrichedPropertyType";
 import { createSPASassClient } from "@/lib/supabase/client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
-  Home,
-  Settings,
-  Component,
+  Building,
   ChevronDown,
   ChevronRight,
-  Building,
+  Component,
+  Home,
+  Settings,
 } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { FaMagic } from "react-icons/fa";
-import type { PropertyRow } from "@/lib/enrichedPropertyType";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
 
 const sidebarTabs = [
   { name: "AI Search", href: "/ai-search", icon: FaMagic },
@@ -125,7 +125,7 @@ export default function AppSidebar() {
                             <Link href={`/dashboard/${property.id}`}>
                               <SidebarMenuSubButton
                                 isActive={isActive}
-                                tooltip={property.title}
+                                title={property.title}
                                 className={cn(
                                   "flex-grow transition-all duration-200",
                                   isActive &&
@@ -158,7 +158,7 @@ export default function AppSidebar() {
                   <Link href={item.href}>
                     <SidebarMenuButton
                       isActive={isActive}
-                      tooltip={item.name}
+                      title={item.name}
                       className={cn(
                         "transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800",
                         isActive &&

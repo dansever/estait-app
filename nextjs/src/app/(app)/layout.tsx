@@ -48,7 +48,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <GlobalProvider>
       <SidebarProvider>
-        <AppLayout children={children} />
+        <AppLayout>{children}</AppLayout>
       </SidebarProvider>
     </GlobalProvider>
   );

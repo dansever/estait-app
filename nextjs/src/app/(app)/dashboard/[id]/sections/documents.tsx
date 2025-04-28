@@ -110,11 +110,10 @@ export default function FileManagement({
     }
   };
 
-  const handleInputChange = (e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const file = target.files?.[0];
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) handleFileUpload(file);
-    target.value = "";
+    e.target.value = ""; // Clear the input value after upload
   };
 
   const copyToClipboard = async (text: string) => {
@@ -606,8 +605,14 @@ export default function FileManagement({
                                 rawProperty?.id
                               );
 
-                              if (!data?.signedUrl) {
+                              if (error) {
+                                console.error("Supabase error:", error);
                                 setError("Failed to generate download link");
+                                return;
+                              }
+
+                              if (!data?.signedUrl) {
+                                setError("No download URL available");
                                 return;
                               }
 
