@@ -1,203 +1,191 @@
 "use client";
 
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+} from "@/components/ui/sidebar";
+import { useGlobal } from "@/lib/context/GlobalContext";
+import { useEffect, useState } from "react";
+import { createSPASassClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { X, Component, Settings, Home } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+  Home,
+  Settings,
+  Component,
+  ChevronDown,
+  ChevronRight,
+  Building,
+} from "lucide-react";
 import { FaMagic } from "react-icons/fa";
 import type { PropertyRow } from "@/lib/enrichedPropertyType";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
-type SidebarTab = {
-  name: string;
-  href: string;
-  icon: React.ElementType;
-  description?: string;
-};
-
-interface AppSidebarProps {
-  isOpen: boolean;
-  toggleSidebar: () => void;
-  productName?: string;
-  properties?: PropertyRow[]; // Optional, can be empty
-}
-
-const sidebarTabs: SidebarTab[] = [
-  {
-    name: "My Dashboard",
-    href: "/properties",
-    icon: Home,
-    description: "Manage listings",
-  },
-  {
-    name: "AI Search",
-    href: "/ai-search",
-    icon: FaMagic,
-    description: "Smart property search",
-  },
-  {
-    name: "Settings",
-    href: "/settings",
-    icon: Settings,
-    description: "Preferences",
-  },
-  {
-    name: "Components",
-    href: "/z-components",
-    icon: Component,
-    description: "UI Components",
-  },
+const sidebarTabs = [
+  { name: "AI Search", href: "/ai-search", icon: FaMagic },
+  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Components", href: "/z-components", icon: Component },
 ];
 
-export default function AppSidebar({
-  isOpen,
-  toggleSidebar,
-  properties = [],
-}: AppSidebarProps) {
+export default function AppSidebar() {
+  const { user } = useGlobal();
   const pathname = usePathname();
-  const router = useRouter();
-  const [propertiesExpanded, setPropertiesExpanded] = useState(() =>
-    pathname.startsWith("/properties")
-  );
+  const [properties, setProperties] = useState<PropertyRow[]>([]);
+  const [isPropertiesOpen, setIsPropertiesOpen] = useState(true);
+  const isDashboardActive =
+    pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
-  // Add hover tracking for dropdown
-  const [isHovering, setIsHovering] = useState(false);
-
-  // Auto-expand dropdown on hover
   useEffect(() => {
-    if (isHovering) {
-      setPropertiesExpanded(true);
-    }
-  }, [isHovering]);
+    const fetchProperties = async () => {
+      if (!user?.id) return;
+      try {
+        const client = await createSPASassClient();
+        const fetchedProperties = await client.getPropertiesByUser(user.id);
+        const sortedProperties = fetchedProperties.sort((a, b) =>
+          a.title.localeCompare(b.title)
+        );
+        setProperties(sortedProperties);
+      } catch (error) {
+        console.error("Failed to fetch properties:", error);
+      }
+    };
+
+    fetchProperties();
+  }, [user?.id]);
 
   return (
-    <>
-      {/* Overlay for mobile */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-            onClick={toggleSidebar}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Floating Sidebar - positioned below navbar with top padding */}
-      <motion.div
-        className={cn(
-          "fixed top-20 left-6 z-30 flex flex-col",
-          "w-[260px] h-[calc(100vh-6rem)]", // slightly smaller height
-          "rounded-2xl bg-white/90",
-          "border border-gray-50",
-          "backdrop-blur-md",
-          "transition-all duration-300 ease-in-out"
-        )}
-        initial={{ x: -320 }}
-        animate={{ x: isOpen ? 0 : -320 }}
-        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <div
-          className={cn(
-            "flex flex-col h-full",
-            "rounded-xl overflow-hidden", // Rounded corners
-            "bg-white dark:bg-gray-900",
-            "border border-gray-200 dark:border-gray-800",
-            "shadow-lg shadow-gray-200/50 dark:shadow-gray-900/50" // Subtle shadow
-          )}
-        >
-          <div className="flex items-center justify-end p-4">
-            <button
-              onClick={toggleSidebar}
-              className="lg:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              <X className="h-6 w-6" />
-            </button>
-          </div>
-
-          <ScrollArea className="flex-1">
-            <nav className="px-3 py-2 space-y-1">
-              {sidebarTabs.map((item) => {
-                // Regular sidebar items
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors",
-                      isActive
-                        ? "bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400"
-                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
-                    )}
-                  >
-                    <item.icon
+    <Sidebar
+      className="!top-[var(--navbar-height)] bg-gradient-to-b from-gray-50 via-gray-100 to-gray-200 dark:from-gray-900 dark:via-gray-950 dark:to-black"
+      collapsible="icon"
+    >
+      <SidebarContent>
+        {/* Main Navigation with Properties Sub-menu */}
+        <SidebarGroup>
+          <SidebarMenu>
+            {/* Dashboard with Properties Submenu */}
+            <SidebarMenuItem>
+              <Collapsible
+                open={isPropertiesOpen}
+                onOpenChange={setIsPropertiesOpen}
+                className="w-full"
+              >
+                <div className="flex w-full">
+                  <Link href="/dashboard">
+                    <SidebarMenuButton
+                      isActive={isDashboardActive}
+                      tooltip="My Dashboard"
                       className={cn(
-                        "mr-3 h-5 w-5 transition-colors",
-                        isActive
-                          ? "text-primary-500 dark:text-primary-400"
-                          : "text-gray-400 group-hover:text-gray-500 dark:text-gray-500 dark:group-hover:text-gray-400"
-                      )}
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {properties.length > 0 && (
-              <div className="px-3 py-4">
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 pl-3">
-                  Properties
-                </div>
-                <div className="space-y-1">
-                  {properties.map((property) => (
-                    <Link
-                      key={property.id}
-                      href={`/properties/${property.id}`}
-                      className={cn(
-                        "block text-sm px-3 py-2 rounded-lg",
-                        pathname === `/properties/${property.id}`
-                          ? "bg-primary-100 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                        "flex-grow transition-all duration-200",
+                        isDashboardActive &&
+                          "bg-primary-100 text-primary font-medium"
                       )}
                     >
-                      {property.title}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </ScrollArea>
+                      <Home
+                        className={cn(
+                          "mr-3 h-5 w-5 transition-colors",
+                          isDashboardActive && "text-primary"
+                        )}
+                      />
+                      <span>My Dashboard</span>
+                    </SidebarMenuButton>
+                  </Link>
 
-          <div className="p-4 border-t border-gray-200 dark:border-gray-800">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <div className="flex items-center">
-                <FaMagic className="h-4 w-4 text-primary-500 dark:text-primary-400 mr-2" />
-                <p className="text-xs font-medium text-gray-800 dark:text-gray-200">
-                  Pro Tip
-                </p>
-              </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                Press{" "}
-                <kbd className="bg-white dark:bg-gray-700 px-1 rounded border shadow-sm dark:border-gray-600">
-                  ⌘K
-                </kbd>{" "}
-                or{" "}
-                <kbd className="bg-white dark:bg-gray-700 px-1 rounded border shadow-sm dark:border-gray-600">
-                  /
-                </kbd>{" "}
-                to quickly search and navigate.
-              </p>
-            </div>
-          </div>
+                  <CollapsibleTrigger asChild>
+                    <button className="mr-2 p-2 text-gray-500 hover:text-primary focus:outline-none hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors group-data-[collapsible=icon]:hidden">
+                      {isPropertiesOpen ? (
+                        <ChevronDown className="h-4 w-4" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4" />
+                      )}
+                    </button>
+                  </CollapsibleTrigger>
+                </div>
+
+                {properties.length > 0 && (
+                  <CollapsibleContent className="transition-all duration-300 ease-in-out">
+                    <SidebarMenuSub className="border-l-primary/30 ml-2">
+                      {properties.map((property) => {
+                        const isActive =
+                          pathname === `/dashboard/${property.id}`;
+                        return (
+                          <SidebarMenuSubItem key={property.id}>
+                            <Link href={`/dashboard/${property.id}`}>
+                              <SidebarMenuSubButton
+                                isActive={isActive}
+                                tooltip={property.title}
+                                className={cn(
+                                  "flex-grow transition-all duration-200",
+                                  isActive &&
+                                    "bg-primary-100 text-primary font-medium border-l-2 border-primary"
+                                )}
+                              >
+                                <Building
+                                  className={cn(
+                                    "mr-2 h-4 w-4 transition-colors",
+                                    isActive && "text-primary"
+                                  )}
+                                />
+                                <span>{property.title}</span>
+                              </SidebarMenuSubButton>
+                            </Link>
+                          </SidebarMenuSubItem>
+                        );
+                      })}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                )}
+              </Collapsible>
+            </SidebarMenuItem>
+
+            {/* Other sidebar tabs */}
+            {sidebarTabs.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <SidebarMenuItem key={item.name}>
+                  <Link href={item.href}>
+                    <SidebarMenuButton
+                      isActive={isActive}
+                      tooltip={item.name}
+                      className={cn(
+                        "transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-800",
+                        isActive &&
+                          "bg-primary-100 text-primary font-medium border-l-2 border-primary"
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          "mr-3 h-5 w-5 transition-colors",
+                          isActive && "text-primary"
+                        )}
+                      />
+                      <span>{item.name}</span>
+                    </SidebarMenuButton>
+                  </Link>
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </SidebarGroup>
+      </SidebarContent>
+
+      <SidebarFooter className="border-t border-gray-200 dark:border-gray-800 py-2 px-4 text-xs text-gray-500">
+        <div className="flex items-center justify-center">
+          <span className="opacity-70">Estait App</span>
         </div>
-      </motion.div>
-    </>
+      </SidebarFooter>
+    </Sidebar>
   );
 }

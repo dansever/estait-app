@@ -144,56 +144,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Property Preview Section */}
-      <section className="py-16 bg-gradient-to-b from-white to-primary-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200">
-            <div className="p-6 border-b border-gray-200 bg-primary-50">
-              <h2 className="text-xl font-semibold text-primary-800">
-                Your Daily Property Recommendations
-              </h2>
-              <p className="text-sm text-gray-500">Today at 9:00 AM</p>
-            </div>
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Top Featured Properties
-              </h3>
-              <div className="space-y-4">
-                {featuredProperties.map((property, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start space-x-4 p-4 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="h-16 w-16 flex-shrink-0 relative rounded-md overflow-hidden">
-                      <Image
-                        src={property.image}
-                        alt={property.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-medium text-gray-900">
-                        {property.name}
-                      </h4>
-                      <p className="text-sm text-gray-500 truncate">
-                        {property.description}
-                      </p>
-                      <div className="mt-1 flex items-center">
-                        <Star className="h-4 w-4 text-yellow-500" />
-                        <span className="ml-1 text-sm text-gray-600">
-                          {property.rating} rating
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Intro Section */}
       <section className="py-16 bg-primary-50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -244,70 +194,6 @@ export default function Home() {
                   {feature.title}
                 </h3>
                 <p className="mt-2 text-gray-600">{feature.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Property Highlights Section */}
-      <section
-        id="about"
-        className="py-20 bg-gradient-to-b from-white to-primary-50"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-headline">
-              Discover Amazing Properties
-            </h2>
-            <p className="mt-4 text-xl text-subhead">
-              Browse through our selection of high-quality properties
-            </p>
-          </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {featuredProperties.map((property, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 hover:shadow-md transition-shadow"
-              >
-                <div className="h-48 w-full relative">
-                  <Image
-                    src={property.image}
-                    alt={property.name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {property.name}
-                  </h3>
-                  <p className="mt-2 text-gray-600">{property.description}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {property.tags.map((tag, tagIndex) => (
-                      <span
-                        key={tagIndex}
-                        className="px-3 py-1 bg-primary-100 text-primary-700 rounded-full text-sm"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-6 flex justify-between items-center">
-                    <div className="flex items-center">
-                      <Star className="h-5 w-5 text-yellow-500" />
-                      <span className="ml-1 text-gray-700">
-                        {property.rating} rating
-                      </span>
-                    </div>
-                    <Link
-                      href={`/properties/${index + 1}`}
-                      className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm transition-colors"
-                    >
-                      View Property
-                    </Link>
-                  </div>
-                </div>
               </div>
             ))}
           </div>

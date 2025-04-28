@@ -63,7 +63,7 @@ export default function Overview({
 
       const success = await supabase.deleteProperty(user.id, rawProperty.id);
       if (success) {
-        window.location.href = "/properties";
+        window.location.href = "/dashboard";
       } else {
         setIsDeleting(false);
       }

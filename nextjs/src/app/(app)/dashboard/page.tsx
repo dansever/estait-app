@@ -10,6 +10,7 @@ import { EnrichedProperty } from "@/lib/enrichedPropertyType";
 import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle } from "lucide-react";
+import LoadingThreeDotsJumping from "@/components/general/LoadingJumpingDots";
 
 // --- helper function ---
 const propertyCardProps = (property: EnrichedProperty) => ({
@@ -99,7 +100,7 @@ export default function PropertiesPage() {
         <Button
           variant="default"
           size="lg"
-          onClick={() => router.push("/properties/add")}
+          onClick={() => router.push("/dashboard/add")}
           className="flex items-center gap-2 px-3 sm:px-5 max-w-full"
         >
           <Plus className="h-5 w-5" />
@@ -124,7 +125,11 @@ export default function PropertiesPage() {
       )}
 
       {loading ? (
-        <p className="text-center text-gray-500 text-sm italic">Loading...</p>
+        <div className="fixed inset-0 z-50 bg-white/70 backdrop-blur-sm flex items-center justify-center">
+          <div className="pointer-events-none p-0 m-0 bg-transparent shadow-none border-none">
+            <LoadingThreeDotsJumping />
+          </div>
+        </div>
       ) : Object.keys(propertiesById).length === 0 ? (
         <p className="text-center text-gray-500 text-sm italic">
           No properties found.

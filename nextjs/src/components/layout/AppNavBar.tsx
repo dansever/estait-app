@@ -2,17 +2,12 @@
 
 import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/navigation"; // Add this import at the top
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Settings, LogOut, Menu } from "lucide-react";
+import { Settings, LogOut } from "lucide-react";
 import { createSPASassClient } from "@/lib/supabase/client";
 import SearchBar, { Action } from "./SearchBar";
-
-interface AppNavBarProps {
-  user: any;
-  toggleSidebar: () => void;
-  isSidebarOpen?: boolean;
-}
+import { useGlobal } from "@/lib/context/GlobalContext";
 
 // Default search actions
 const defaultActions: Action[] = [
@@ -23,7 +18,7 @@ const defaultActions: Action[] = [
     description: "Find listings",
     short: "⌘K",
     end: "Search",
-    link: "/properties",
+    link: "/dashboard",
   },
   {
     id: "2",
@@ -32,7 +27,7 @@ const defaultActions: Action[] = [
     description: "Create listing",
     short: "⌘N",
     end: "Action",
-    link: "/properties/add",
+    link: "/dashboard/add",
   },
   {
     id: "3",
@@ -54,18 +49,14 @@ const defaultActions: Action[] = [
   },
 ];
 
-export default function AppNavBar({
-  user,
-  toggleSidebar,
-  isSidebarOpen = false,
-}: AppNavBarProps) {
+export default function AppNavBar() {
+  const { user } = useGlobal();
   const [isUserDropdownOpen, setUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const router = useRouter(); // initialize Next.js router
+  const router = useRouter();
 
-  // Handle user dropdown clicks outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
@@ -83,7 +74,6 @@ export default function AppNavBar({
     };
   }, [isUserDropdownOpen]);
 
-  // Handle search keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -103,13 +93,13 @@ export default function AppNavBar({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [searchInputRef]);
+  }, []);
 
   const handleLogout = async () => {
     try {
       const client = await createSPASassClient();
       await client.logout();
-      router.push("/"); // ✅ After successful logout, go to "/"
+      router.push("/");
     } catch (error) {
       console.error("Error logging out:", error);
     }
@@ -123,28 +113,22 @@ export default function AppNavBar({
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 bg-white/50 backdrop-blur-sm shadow-sm transition-all duration-300 ease-in-out">
-      <div className="h-16 flex items-center justify-between px-4">
-        {/* Menu toggle button for mobile */}
-        <button
-          className="lg:hidden p-2 rounded-md text-gray-500 hover:text-gray-600 hover:bg-gray-100"
-          onClick={toggleSidebar}
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-
+    <div
+      className="fixed top-0 left-0 right-0 z-40 bg-white/50 backdrop-blur-sm shadow-sm transition-all duration-300 ease-in-out"
+      style={{ height: "var(--navbar-height)" }}
+    >
+      <div className="h-full flex items-center justify-between px-4">
         {/* App logo/name */}
         <Link
-          href="/properties"
+          href="/dashboard"
           className="flex items-center space-x-2 text-primary-600 font-display text-lg font-semibold hover:text-primary-700 transition-colors"
         >
           <span>Estait</span>
         </Link>
 
-        {/* Left spacer on desktop, hidden on mobile */}
         <div className="hidden lg:block"></div>
 
-        {/* Centered search bar container */}
+        {/* Centered search bar */}
         <div className="flex-1 flex justify-center items-center max-w-2xl mx-auto">
           <SearchBar
             value={searchQuery}

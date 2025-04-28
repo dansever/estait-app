@@ -92,7 +92,7 @@ export default function PropertyCard({
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const handleClick = () => {
-    router.push(`/properties/${id}`);
+    router.push(`/dashboard/${id}`);
   };
 
   const handleSave = (e: React.MouseEvent) => {
